@@ -1,0 +1,19 @@
+{
+    "name": "Twinny.Mobile",
+    "rootNamespace": "Twinny.Mobile",
+    "references": [
+        "GUID:5dce1e5efc474ce4791e7ab351a3ddb4",
+        "GUID:0a0c24e570abd5a44b27d2ed6ef85b04",
+        "GUID:75469ad4d38634e559750d17036d5f7c",
+        "GUID:75469ad4d38634e559750d17036d5f7c"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

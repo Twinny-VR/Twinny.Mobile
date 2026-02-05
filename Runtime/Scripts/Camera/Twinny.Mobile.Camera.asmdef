@@ -1,0 +1,27 @@
+{
+    "name": "Twinny.Mobile.Camera",
+    "rootNamespace": "Twinny.Mobile.Camera",
+    "references": [
+        "GUID:9c2b2406ba3ac0e4a8518664b4f03e72",
+        "GUID:0a0c24e570abd5a44b27d2ed6ef85b04",
+        "GUID:5dce1e5efc474ce4791e7ab351a3ddb4",
+        "GUID:4307f53044263cf4b835bd812fc161a4"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": true,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [
+        "TWINNY_CAMERA"
+    ],
+    "versionDefines": [
+        {
+            "name": "com.unity.cinemachine",
+            "expression": "3.1.5",
+            "define": "TWINNY_CAMERA"
+        }
+    ],
+    "noEngineReferences": false
+}

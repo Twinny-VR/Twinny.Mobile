@@ -1,0 +1,26 @@
+{
+  "name": "com.twinny.mobile",
+  "displayName": "Twinny Mobile",
+  "version": "26.0.1",
+  "type": "tool",
+  "unity": "6000.0",
+  "unityRelease": "43f1",
+  "description": "A Mobile module for Twinny Engine.\n\nhttps://github.com/",
+  "documentationUrl": "",
+  "changelogUrl": "",
+  "licensesUrl": "",
+  "keywords": [],
+  "author": {
+    "name": "Twinny Vr",
+    "email": "conceptfac@gmail.com",
+    "url": "https://twinnyvr.co/"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Twinny-Mobile/"
+  },
+  "dependencies": {
+    "com.unity.cinemachine": "3.1.5"
+  },
+  "samples": []
+}
