@@ -8,8 +8,8 @@ namespace Twinny.Mobile.Env
     /// </summary>
     public static class SkyboxHandler
     {
-        private const string DefaultPropertyName = "_blendFactor";
-        private const float DefaultDurationSeconds = 1f;
+        private const string m_defaultPropertyName = "_blendFactor";
+        private const float m_defaultDurationSeconds = 1f;
 
         private static SkyboxHandlerRunner _runner;
         private static bool _hasOriginal;
@@ -25,7 +25,7 @@ namespace Twinny.Mobile.Env
         /// <summary>
         /// Toggles the global blend factor between 0 and 1 with a smooth transition.
         /// </summary>
-        public static void SwitchSkybox() => SwitchSkybox(DefaultDurationSeconds);
+        public static void SwitchSkybox() => SwitchSkybox(m_defaultDurationSeconds);
         
 
         /// <summary>
@@ -34,8 +34,9 @@ namespace Twinny.Mobile.Env
         public static void SwitchSkybox(float speed)
         {
             EnsureRunner();
-            _runner.ToggleBlend(DefaultPropertyName, Mathf.Max(0f, speed));
+            _runner.ToggleBlend(m_defaultPropertyName, Mathf.Max(0f, speed));
         }
+        public static void SwitchSkybox(int factor) => SwitchSkybox(m_defaultDurationSeconds, factor);
 
         /// <summary>
         /// Forces the global blend factor to 0 or 1 using the given speed (seconds).
@@ -44,7 +45,7 @@ namespace Twinny.Mobile.Env
         {
             EnsureRunner();
             float target = Mathf.Clamp01(factor);
-            _runner.BlendTo(DefaultPropertyName, target, Mathf.Max(0f, speed));
+            _runner.BlendTo(m_defaultPropertyName, target, Mathf.Max(0f, speed));
         }
 
         private static void EnsureRunner()
@@ -118,7 +119,7 @@ namespace Twinny.Mobile.Env
         {
             if (state != UnityEditor.PlayModeStateChange.ExitingPlayMode) return;
             if (!_hasOriginal) return;
-            Shader.SetGlobalFloat(DefaultPropertyName, _originalValue);
+            Shader.SetGlobalFloat(m_defaultPropertyName, _originalValue);
             _hasOriginal = false;
         }
 #endif

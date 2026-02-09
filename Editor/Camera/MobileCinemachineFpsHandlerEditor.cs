@@ -13,9 +13,10 @@ namespace Twinny.Mobile.Editor.Camera
         private const string UxmlPath = "Packages/com.twinny.mobile/Editor/Camera/MobileCinemachineOrbitalHandlerEditor.uxml";
         private const string UssPath = "Packages/com.twinny.mobile/Editor/Camera/MobileCinemachineOrbitalHandlerEditor.uss";
         private const string IconsPath = "Packages/com.twinny.mobile/Editor/Camera/Icons/icons.png";
-        private const string FpsIconName = "ICO_FpsCam";
+        private const string FpsIconName = "icons_1";
         private const string TitleFontPath = "Packages/com.twinny.twe26/Editor/SetupGuide/Resources/Fonts/DINNextLTPro-Condensed.otf";
         private const float SliderStep = 0.1f;
+        private const float GyroSliderStep = 0.001f;
 
         private VisualTreeAsset _visualTree;
         private StyleSheet _styleSheet;
@@ -63,15 +64,19 @@ namespace Twinny.Mobile.Editor.Camera
 
             AddSlider(container, "_rotateSpeed", 0f, 2f, "Rotate Speed");
             AddSlider(container, "_tiltSpeed", 0f, 2f, "Tilt Speed");
-            AddSlider(container, "_panSpeed", 0f, 10f, "Pan Speed");
-            AddSlider(container, "_panReturnSpeed", 0f, 20f, "Pan Return Speed");
             AddSlider(container, "_zoomFov", 10f, 120f, "Zoom FOV");
             AddSlider(container, "_zoomSpeed", 1f, 240f, "Zoom Speed");
             AddSlider(container, "_zoomReleaseDelay", 0f, 1f, "Zoom Release Delay");
 
-            AddProperty(container, serializedObject.FindProperty("_returnPanToOriginOnRelease"), serializedObject);
-            AddProperty(container, serializedObject.FindProperty("_panTargetMode"), serializedObject);
-            AddProperty(container, serializedObject.FindProperty("_customPanTarget"), serializedObject);
+            var useGyroProp = serializedObject.FindProperty("_useGyroscope");
+            var useGyroField = AddPropertyField(container, useGyroProp, serializedObject);
+            var gyroYaw = AddSliderField(container, "_gyroYawSpeed", 0f, 0.2f, "Gyro Yaw Speed", GyroSliderStep, false);
+            var gyroPitch = AddSliderField(container, "_gyroPitchSpeed", 0f, 0.2f, "Gyro Pitch Speed", GyroSliderStep, false);
+            var gyroDeadZone = AddSliderField(container, "_gyroDeadZone", 0f, 5f, "Gyro Dead Zone");
+            UpdateGyroVisibility(useGyroProp, gyroYaw, gyroPitch, gyroDeadZone);
+            if (useGyroField != null)
+                useGyroField.RegisterValueChangeCallback(_ =>
+                    UpdateGyroVisibility(useGyroProp, gyroYaw, gyroPitch, gyroDeadZone));
 
             AddMinMaxSlider(container, "_verticalAxisLimits", -90f, 90f, "Tilt Limits");
         }
@@ -173,6 +178,19 @@ namespace Twinny.Mobile.Editor.Camera
             container.Add(field);
         }
 
+        private PropertyField AddPropertyField(
+            VisualElement container,
+            SerializedProperty root,
+            SerializedObject owner
+        )
+        {
+            if (root == null) return null;
+            var field = new PropertyField(root);
+            field.Bind(owner);
+            container.Add(field);
+            return field;
+        }
+
         private void AddProperty(VisualElement container, SerializedProperty root, string relativeName, SerializedObject owner)
         {
             if (root == null) return;
@@ -193,7 +211,35 @@ namespace Twinny.Mobile.Editor.Camera
         {
             SerializedProperty prop = serializedObject.FindProperty(propertyName);
             if (prop == null) return;
-            AddSlider(container, prop, min, max, label, serializedObject);
+            AddSlider(container, prop, min, max, label, serializedObject, SliderStep, true);
+        }
+
+        private VisualElement AddSliderField(
+            VisualElement container,
+            string propertyName,
+            float min,
+            float max,
+            string label
+        )
+        {
+            SerializedProperty prop = serializedObject.FindProperty(propertyName);
+            if (prop == null) return null;
+            return AddSlider(container, prop, min, max, label, serializedObject, SliderStep, true);
+        }
+
+        private VisualElement AddSliderField(
+            VisualElement container,
+            string propertyName,
+            float min,
+            float max,
+            string label,
+            float step,
+            bool snap
+        )
+        {
+            SerializedProperty prop = serializedObject.FindProperty(propertyName);
+            if (prop == null) return null;
+            return AddSlider(container, prop, min, max, label, serializedObject, step, snap);
         }
 
         private void AddSlider(
@@ -208,16 +254,18 @@ namespace Twinny.Mobile.Editor.Camera
             if (root == null) return;
             SerializedProperty prop = root.FindPropertyRelative(relativeName);
             if (prop == null) return;
-            AddSlider(container, prop, min, max, label, root.serializedObject);
+            AddSlider(container, prop, min, max, label, root.serializedObject, SliderStep, true);
         }
 
-        private void AddSlider(
+        private VisualElement AddSlider(
             VisualElement container,
             SerializedProperty prop,
             float min,
             float max,
             string label,
-            SerializedObject owner
+            SerializedObject owner,
+            float step,
+            bool snap
         )
         {
             var row = new VisualElement();
@@ -235,22 +283,22 @@ namespace Twinny.Mobile.Editor.Camera
 
             slider.RegisterValueChangedCallback(evt =>
             {
-                float snapped = Snap(evt.newValue, SliderStep);
-                if (!Mathf.Approximately(evt.newValue, snapped))
-                    slider.SetValueWithoutNotify(snapped);
-                prop.floatValue = snapped;
+                float value = snap ? Snap(evt.newValue, step) : evt.newValue;
+                if (snap && !Mathf.Approximately(evt.newValue, value))
+                    slider.SetValueWithoutNotify(value);
+                prop.floatValue = value;
                 owner.ApplyModifiedProperties();
-                field.SetValueWithoutNotify(snapped);
+                field.SetValueWithoutNotify(value);
             });
 
             field.RegisterValueChangedCallback(evt =>
             {
-                float snapped = Snap(evt.newValue, SliderStep);
-                if (!Mathf.Approximately(evt.newValue, snapped))
-                    field.SetValueWithoutNotify(snapped);
-                prop.floatValue = snapped;
+                float value = snap ? Snap(evt.newValue, step) : evt.newValue;
+                if (snap && !Mathf.Approximately(evt.newValue, value))
+                    field.SetValueWithoutNotify(value);
+                prop.floatValue = value;
                 owner.ApplyModifiedProperties();
-                slider.SetValueWithoutNotify(snapped);
+                slider.SetValueWithoutNotify(value);
             });
 
             var fieldRow = new VisualElement();
@@ -261,6 +309,7 @@ namespace Twinny.Mobile.Editor.Camera
             row.Add(labelEl);
             row.Add(fieldRow);
             container.Add(row);
+            return row;
         }
 
         private void AddMinMaxSlider(
@@ -355,6 +404,19 @@ namespace Twinny.Mobile.Editor.Camera
         private static Vector2 Snap(Vector2 value, float step)
         {
             return new Vector2(Snap(value.x, step), Snap(value.y, step));
+        }
+
+        private void UpdateGyroVisibility(
+            SerializedProperty useGyroProp,
+            VisualElement yaw,
+            VisualElement pitch,
+            VisualElement deadZone
+        )
+        {
+            bool show = useGyroProp != null && useGyroProp.boolValue;
+            if (yaw != null) yaw.style.display = show ? DisplayStyle.Flex : DisplayStyle.None;
+            if (pitch != null) pitch.style.display = show ? DisplayStyle.Flex : DisplayStyle.None;
+            if (deadZone != null) deadZone.style.display = show ? DisplayStyle.Flex : DisplayStyle.None;
         }
 
         private void ApplyHeroIcon(VisualElement root)

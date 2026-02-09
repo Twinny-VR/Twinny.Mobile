@@ -1,0 +1,120 @@
+:root {
+
+}
+
+.main-ui {
+    flex-grow: 1;
+    align-items: center;
+    justify-content: center;
+}
+
+.start-button {
+    background-color: rgb(0, 0, 0);
+    color: rgb(132, 238, 0);
+    border-left-color: rgb(132, 238, 0);
+    border-right-color: rgb(132, 238, 0);
+    border-top-color: rgb(132, 238, 0);
+    border-bottom-color: rgb(132, 238, 0);
+    border-top-left-radius: 8px;
+    border-top-right-radius: 8px;
+    border-bottom-right-radius: 8px;
+    border-bottom-left-radius: 8px;
+}
+
+.experience-ui {
+    justify-content: flex-end;
+    align-items: stretch;
+    flex-grow: 13;
+    display: none;
+}
+
+.bottom-bar {
+    height: 64px;
+    align-items: center;
+    justify-content: flex-end;
+    padding-top: 8px;
+    padding-right: 8px;
+    padding-bottom: 8px;
+    padding-left: 8px;
+    flex-direction: row;
+}
+
+.loading-overlay {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    background-color: rgb(0, 0, 0);
+    display: none;
+    align-items: center;
+    justify-content: flex-end;
+    padding-bottom: 48px;
+}
+
+.loading-bar {
+    height: 8px;
+    width: 60%;
+    background-color: rgb(30, 30, 30);
+    border-top-left-radius: 4px;
+    border-top-right-radius: 4px;
+    border-bottom-left-radius: 4px;
+    border-bottom-right-radius: 4px;
+}
+
+.loading-bar-fill {
+    height: 100%;
+    width: 0%;
+    background-color: rgb(132, 238, 0);
+    border-top-left-radius: 4px;
+    border-top-right-radius: 4px;
+    border-bottom-left-radius: 4px;
+    border-bottom-right-radius: 4px;
+}
+
+.gyro-toggle-button {
+    height: 32px;
+    min-width: 96px;
+    margin-right: 8px;
+    padding-left: 8px;
+    padding-right: 8px;
+    background-color: rgb(26, 26, 26);
+    color: rgb(132, 238, 0);
+    border-left-color: rgb(132, 238, 0);
+    border-right-color: rgb(132, 238, 0);
+    border-top-color: rgb(132, 238, 0);
+    border-bottom-color: rgb(132, 238, 0);
+    border-top-left-radius: 6px;
+    border-top-right-radius: 6px;
+    border-bottom-left-radius: 6px;
+    border-bottom-right-radius: 6px;
+}
+
+.icon-button {
+    align-items: stretch;
+    align-self: flex-end;
+    margin-top: 0;
+    margin-right: 0;
+    margin-bottom: 0;
+    margin-left: 0;
+    padding-top: 0;
+    padding-right: 0;
+    padding-bottom: 0;
+    padding-left: 0;
+    width: 48px;
+    height: 48px;
+    background-color: rgb(26, 26, 26);
+    border-left-color: rgb(132, 238, 0);
+    border-right-color: rgb(132, 238, 0);
+    border-top-color: rgb(132, 238, 0);
+    border-bottom-color: rgb(132, 238, 0);
+    -unity-background-image-tint-color: rgb(132, 238, 0);
+    background-size: 80% 80%;
+}
+
+.immersive-button {
+    background-image: url("project://database/Packages/com.twinny.mobile/Samples/SceneTemplates/MobileStartScene/Sprites/UI_Sheet.png?fileID=-1364167185&guid=a2daaca17c893be489c7816c9a39a4cd&type=3#ICO_Immersion");
+}
+
+.mockup-button {
+    background-image: url("project://database/Packages/com.twinny.mobile/Samples/SceneTemplates/MobileStartScene/Sprites/Ion_Building.png?fileID=21300000&guid=b969cc91f097f8748ac779b1e60ecc9f&type=3#Ion_Building");
+    display: none;
+}

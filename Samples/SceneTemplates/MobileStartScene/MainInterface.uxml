@@ -1,0 +1,18 @@
+<ui:UXML xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" noNamespaceSchemaLocation="../../../../../UIElementsSchema/UIElements.xsd" editor-extension-mode="False">
+    <Style src="project://database/Packages/com.twinny.mobile/Samples/SceneTemplates/MobileStartScene/MainInterfaceStyles.uss?fileID=7433441132597879392&amp;guid=fa500c47d5259e04092dec0cbd56bb8d&amp;type=3#MainInterfaceStyles"/>
+    <ui:VisualElement name="MainUI" class="main-ui" picking-mode="Ignore">
+        <ui:Button text="Iniciar" name="StartButton" class="start-button"/>
+    </ui:VisualElement>
+    <ui:VisualElement name="ExperienceUI" class="experience-ui" picking-mode="Ignore">
+        <ui:VisualElement name="BottomBar" class="bottom-bar" picking-mode="Ignore">
+            <ui:Button text="Gyro On" name="GyroToggleButton" class="gyro-toggle-button"/>
+            <ui:Button text="" name="ImmersiveButton" class="icon-button immersive-button"/>
+            <ui:Button text="" name="MockupButton" class="icon-button mockup-button"/>
+        </ui:VisualElement>
+    </ui:VisualElement>
+    <ui:VisualElement name="LoadingOverlay" class="loading-overlay">
+        <ui:VisualElement name="LoadingBar" class="loading-bar">
+            <ui:VisualElement name="LoadingBarFill" class="loading-bar-fill"/>
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:UXML>

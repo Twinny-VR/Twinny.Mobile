@@ -59,6 +59,11 @@ namespace Twinny.Mobile
             throw new System.NotImplementedException();
         }
 
+        public void OnExperienceLoaded()
+        {
+            throw new System.NotImplementedException();
+        }
+
         public void OnExperienceStarting()
         {
             throw new System.NotImplementedException();
@@ -105,6 +110,16 @@ namespace Twinny.Mobile
         }
 
         public void OnTeleport()
+        {
+            throw new System.NotImplementedException();
+        }
+
+        public void OnEnterImmersiveMode()
+        {
+            throw new System.NotImplementedException();
+        }
+
+        public void OnEnterMockupMode()
         {
             throw new System.NotImplementedException();
         }

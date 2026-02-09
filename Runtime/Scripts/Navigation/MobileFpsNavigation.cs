@@ -1,8 +1,9 @@
 using System;
 using Concept.Core;
-using Twinny.Mobile;
+using Twinny.Core.Input;
 using UnityEngine;
 using UnityEngine.AI;
+using UnityEngine.SceneManagement;
 
 namespace Twinny.Mobile.Navigation
 {
@@ -10,7 +11,7 @@ namespace Twinny.Mobile.Navigation
     /// Moves a NavMeshAgent to tapped positions and optionally reports interactable hits.
     /// </summary>
     [RequireComponent(typeof(NavMeshAgent))]
-    public class MobileFpsNavigation : MonoBehaviour, IMobileInputCallbacks
+    public class MobileFpsNavigation : MonoBehaviour, IMobileInputCallbacks, ITwinnyMobileCallbacks
     {
         [Header("Navigation")]
         [SerializeField] private NavMeshAgent _agent;
@@ -30,15 +31,19 @@ namespace Twinny.Mobile.Navigation
         /// </summary>
         public event Action<Transform> OnInteractableClick;
 
+        private bool _isModeActive;
+
         private void OnEnable()
         {
             EnsureReferences();
             CallbackHub.RegisterCallback<IMobileInputCallbacks>(this);
+            CallbackHub.RegisterCallback<ITwinnyMobileCallbacks>(this);
         }
 
         private void OnDisable()
         {
             CallbackHub.UnregisterCallback<IMobileInputCallbacks>(this);
+            CallbackHub.UnregisterCallback<ITwinnyMobileCallbacks>(this);
         }
 
         private void OnValidate()
@@ -49,6 +54,7 @@ namespace Twinny.Mobile.Navigation
 
         public void OnSelectHit(RaycastHit hit)
         {
+            if (!_isModeActive) return;
             if (_agent == null)
             {
                 Debug.LogWarning("[MobileFpsNavigation] NavMeshAgent is null.");
@@ -96,6 +102,27 @@ namespace Twinny.Mobile.Navigation
         public void OnAccessibilityAction(string actionName) { }
         public void OnScreenReaderGesture(string gestureType) { }
         public void OnNotificationAction(bool isQuickAction) { }
+
+        public void OnStartInteract(GameObject gameObject) { }
+        public void OnStopInteract(GameObject gameObject) { }
+        public void OnStartTeleport() { }
+        public void OnTeleport() { }
+
+        public void OnPlatformInitializing() { }
+        public void OnPlatformInitialized() { }
+        public void OnExperienceReady() { }
+        public void OnExperienceStarting() { }
+        public void OnExperienceStarted() { }
+        public void OnExperienceEnding() { }
+        public void OnExperienceEnded(bool isRunning) { }
+        public void OnExperienceLoaded() { }
+        public void OnSceneLoadStart(string sceneName) { }
+        public void OnSceneLoaded(Scene scene) { }
+        public void OnTeleportToLandMark(int landMarkIndex) { }
+        public void OnSkyboxHDRIChanged(Material material) { }
+
+        public void OnEnterImmersiveMode() => _isModeActive = true;
+        public void OnEnterMockupMode() => _isModeActive = false;
 
         private bool IsInteractable(Transform target)
         {

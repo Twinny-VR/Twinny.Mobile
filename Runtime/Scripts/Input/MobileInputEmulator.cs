@@ -16,12 +16,13 @@ namespace Twinny.Mobile.Input
         private MobileInputSettings _settings;
         private bool _warnedMissingSettings;
         private bool _warnedMissingRouter;
-        [SerializeField] private bool _logTapDebug = true;
+        [SerializeField] private bool _logTapDebug = false;
         [SerializeField] private bool _ignoreUiBlocking = true;
         private bool _loggedStartup;
 
         private bool _singleDown;
         private bool _singleDragging;
+        private bool _suppressTap;
         private Vector3 _singleStartPos;
         private float _singleStartTime;
         private Vector3 _lastSinglePos;
@@ -53,19 +54,13 @@ namespace Twinny.Mobile.Input
         private void Update()
         {
             if (_logTapDebug && !_loggedStartup)
-            {
                 _loggedStartup = true;
-                Debug.Log("[MobileInputEmulator] Update running.");
-            }
             EnsureSettingsLoaded();
             ForceReleaseIfButtonsUp();
             if (_suppressSingleUntilRelease && !UnityEngine.Input.GetMouseButton(0))
                 _suppressSingleUntilRelease = false;
             if (!_ignoreUiBlocking && EventSystem.current?.IsPointerOverGameObject() == true)
-            {
-                if (_logTapDebug) Debug.Log("[MobileInputEmulator] Pointer over UI, ignoring input.");
                 return;
-            }
 
             if (HandleThreeFinger()) return;
             if (HandleTwoFinger()) return;
@@ -93,6 +88,7 @@ namespace Twinny.Mobile.Input
             _twoFingerLongPressDetected = false;
             _lastTwoFingerPos = UnityEngine.Input.mousePosition;
             _suppressSingleUntilRelease = true;
+            _suppressTap = true;
             _singleDown = false;
             _singleDragging = false;
         }
@@ -104,6 +100,7 @@ namespace Twinny.Mobile.Input
             if (delta.sqrMagnitude > 0f)
             {
                 _twoFingerDragging = true;
+                _suppressTap = true;
                 Vector2 direction = delta.normalized;
                 Vector2 center = current;
                 CallbackHub.CallAction<IMobileInputCallbacks>(
@@ -199,6 +196,7 @@ namespace Twinny.Mobile.Input
             }
             _threeFingerDown = false;
             _threeFingerDragging = false;
+            _suppressTap = false;
         }
 
         private bool HandleMousePinch()
@@ -263,7 +261,6 @@ namespace Twinny.Mobile.Input
                 _singleStartPos = UnityEngine.Input.mousePosition;
                 _lastSinglePos = _singleStartPos;
                 _singleStartTime = Time.time;
-                if (_logTapDebug) Debug.Log("[MobileInputEmulator] LMB down.");
                 router.PrimaryDown(_singleStartPos.x, _singleStartPos.y);
             }
 
@@ -274,7 +271,7 @@ namespace Twinny.Mobile.Input
                 if (delta.sqrMagnitude > _settings.DragThreshold * _settings.DragThreshold)
                 {
                     _singleDragging = true;
-                    if (_logTapDebug) Debug.Log("[MobileInputEmulator] LMB dragging.");
+                    _suppressTap = true;
                     router.PrimaryDrag(delta.x, delta.y);
                     MobileInputEvents.Drag(delta, current);
                 }
@@ -284,15 +281,15 @@ namespace Twinny.Mobile.Input
             if (_singleDown && UnityEngine.Input.GetMouseButtonUp(0))
             {
                 Vector3 current = UnityEngine.Input.mousePosition;
-                if (_logTapDebug) Debug.Log("[MobileInputEmulator] LMB up.");
                 router.PrimaryUp(current.x, current.y);
-                if (!_singleDragging && Time.time - _singleStartTime <= TapMaxTime)
+                if (!_singleDragging && !_suppressTap && Time.time - _singleStartTime <= TapMaxTime)
                 {
                     TrySelect(current, router);
                     MobileInputEvents.Tap(current);
                 }
                 _singleDown = false;
                 _singleDragging = false;
+                _suppressTap = false;
             }
         }
 
@@ -314,9 +311,8 @@ namespace Twinny.Mobile.Input
 
             if (_singleDown && !UnityEngine.Input.GetMouseButton(0))
             {
-                if (_logTapDebug) Debug.Log("[MobileInputEmulator] LMB released without up event.");
                 var router = TryGetRouter();
-                if (router != null && !_singleDragging && Time.time - _singleStartTime <= TapMaxTime)
+                if (router != null && !_singleDragging && !_suppressTap && Time.time - _singleStartTime <= TapMaxTime)
                 {
                     TrySelect(_lastSinglePos, router);
                     MobileInputEvents.Tap(_lastSinglePos);
@@ -324,6 +320,7 @@ namespace Twinny.Mobile.Input
                 _singleDown = false;
                 _singleDragging = false;
                 _suppressSingleUntilRelease = false;
+                _suppressTap = false;
             }
         }
 
@@ -370,7 +367,6 @@ namespace Twinny.Mobile.Input
             var camera = GetRaycastCamera();
             if (camera == null)
             {
-                if (_logTapDebug) Debug.Log("[MobileInputEmulator] No camera found for raycast.");
                 router.Cancel();
                 return;
             }
@@ -384,8 +380,6 @@ namespace Twinny.Mobile.Input
             }
             else
             {
-                if (_logTapDebug) Debug.Log("[MobileInputEmulator] Click raycast missed.");
-                if (_logTapDebug) Debug.DrawRay(ray.origin, ray.direction * 100f, Color.red, 1f);
                 Debug.Log("[MobileInputEmulator] Click hit nothing.");
                 router.Cancel();
             }

@@ -2,6 +2,7 @@ using Concept.Core;
 using Twinny.Core.Input;
 using Unity.Cinemachine;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 namespace Twinny.Mobile.Camera
 {
@@ -10,55 +11,39 @@ namespace Twinny.Mobile.Camera
     /// </summary>
     [RequireComponent(typeof(CinemachineCamera))]
     [RequireComponent(typeof(CinemachinePanTilt))]
-    public class MobileCinemachineFpsHandler : MonoBehaviour, IMobileInputCallbacks
+    public class MobileCinemachineFpsHandler : MonoBehaviour, IMobileInputCallbacks, ITwinnyMobileCallbacks, IMobileUICallbacks
     {
-        public enum PanTargetMode
-        {
-            CameraTransform,
-            TrackingTarget,
-            LookAtTarget,
-            CustomTransform
-        }
-
         [Header("Cinemachine")]
         [SerializeField] private CinemachineCamera _cinemachineCamera;
         [SerializeField] private CinemachinePanTilt _panTilt;
+
+        [Header("Mode")]
+        [SerializeField] private int _activePriority = 20;
+        [SerializeField] private int _inactivePriority = 5;
 
         [Header("Tuning")]
         [SerializeField] private float _rotateSpeed = 0.1f;
         [SerializeField] private float _tiltSpeed = 0.1f;
         [SerializeField] private Vector2 _verticalAxisLimits = new Vector2(-80f, 80f);
-        [SerializeField] private float _panSpeed = 6f;
-        [SerializeField] private float _panReturnSpeed = 3f;
-        [SerializeField] private bool _returnPanToOriginOnRelease = true;
-        [SerializeField] private PanTargetMode _panTargetMode = PanTargetMode.TrackingTarget;
-        [SerializeField] private Transform _customPanTarget;
         [SerializeField] private float _zoomFov = 45f;
         [SerializeField] private float _zoomSpeed = 90f;
         [SerializeField] private float _zoomReleaseDelay = 0.15f;
+        [SerializeField] private bool _useGyroscope = true;
+        [SerializeField] private float _gyroYawSpeed = 0.02f;
+        [SerializeField] private float _gyroPitchSpeed = 0.02f;
+        [SerializeField] private float _gyroDeadZone = 0.5f;
+        [SerializeField] private float _gyroScale = 0.25f;
 
         private bool _hasDefaultFov;
         private float _defaultFov;
         private float _lastZoomInputTime;
         private bool _zoomRequested;
-        private bool _isPanning;
-        private bool _isReturningPan;
-        private Vector3 _panOriginPosition;
-        private Vector3 _panOriginLocalPosition;
-        private bool _panUseLocalSpace;
-        private Vector3 _panReturnVelocity;
-        private Transform _panTarget;
-        private Transform _originalFollow;
-        private Transform _panPivot;
+        private bool _isModeActive;
 
         private void Update()
         {
             if (!IsActiveCamera()) return;
             UpdateZoom();
-            UpdatePanReturn();
-#if UNITY_EDITOR
-            UpdateEditorPanRelease();
-#endif
         }
 
         private void OnEnable()
@@ -66,14 +51,18 @@ namespace Twinny.Mobile.Camera
             EnsureReferences();
             ClampLimits();
             CacheDefaultFov();
-            SetupPanPivot();
+            DisableRecentering();
+            ApplyMode(_isModeActive);
             CallbackHub.RegisterCallback<IMobileInputCallbacks>(this);
+            CallbackHub.RegisterCallback<ITwinnyMobileCallbacks>(this);
+            CallbackHub.RegisterCallback<IMobileUICallbacks>(this);
         }
 
         private void OnDisable()
         {
-            RestorePanPivot();
             CallbackHub.UnregisterCallback<IMobileInputCallbacks>(this);
+            CallbackHub.UnregisterCallback<ITwinnyMobileCallbacks>(this);
+            CallbackHub.UnregisterCallback<IMobileUICallbacks>(this);
         }
 
         private void OnValidate()
@@ -89,23 +78,9 @@ namespace Twinny.Mobile.Camera
         public void OnCancel() { }
         public void OnPrimaryDrag(float dx, float dy) => ApplyRotation(dx, dy);
         public void OnZoom(float delta) => RegisterZoomInput(delta);
-        public void OnTwoFingerTap(Vector2 position) => EndPan();
+        public void OnTwoFingerTap(Vector2 position) { }
         public void OnTwoFingerLongPress(Vector2 position) { }
-        public void OnTwoFingerSwipe(Vector2 direction, Vector2 startPosition)
-        {
-            if (direction.sqrMagnitude <= 0.0001f)
-            {
-#if UNITY_EDITOR
-                if (UnityEngine.Input.GetMouseButton(0) || UnityEngine.Input.GetMouseButton(1))
-                    return;
-#endif
-                EndPan();
-                return;
-            }
-
-            BeginPanIfNeeded();
-            ApplyPan(direction);
-        }
+        public void OnTwoFingerSwipe(Vector2 direction, Vector2 startPosition) { }
         public void OnThreeFingerTap(Vector2 position) { }
         public void OnThreeFingerSwipe(Vector2 direction, Vector2 startPosition) { }
         public void OnThreeFingerPinch(float delta) { }
@@ -116,13 +91,40 @@ namespace Twinny.Mobile.Camera
         public void OnHapticTouch() { }
         public void OnBackTap(int tapCount) { }
         public void OnShake() { }
-        public void OnTilt(Vector3 tiltRotation) { }
+        public void OnTilt(Vector3 tiltRotation) => ApplyGyroRotation(tiltRotation);
         public void OnDeviceRotated(DeviceOrientation orientation) { }
         public void OnPickUp() { }
         public void OnPutDown() { }
         public void OnAccessibilityAction(string actionName) { }
         public void OnScreenReaderGesture(string gestureType) { }
         public void OnNotificationAction(bool isQuickAction) { }
+
+        public void OnStartInteract(GameObject gameObject) { }
+        public void OnStopInteract(GameObject gameObject) { }
+        public void OnStartTeleport() { }
+        public void OnTeleport() { }
+
+        public void OnPlatformInitializing() { }
+        public void OnPlatformInitialized() { }
+        public void OnExperienceReady() { }
+        public void OnExperienceStarting() { }
+        public void OnExperienceStarted() { }
+        public void OnExperienceEnding() { }
+        public void OnExperienceEnded(bool isRunning) { }
+        public void OnExperienceLoaded() { }
+        public void OnSceneLoadStart(string sceneName) { }
+        public void OnSceneLoaded(Scene scene) { }
+        public void OnTeleportToLandMark(int landMarkIndex) { }
+        public void OnSkyboxHDRIChanged(Material material) { }
+
+        public void OnEnterImmersiveMode() => ApplyMode(true);
+        public void OnEnterMockupMode() => ApplyMode(false);
+
+        public void OnImmersiveRequested() { }
+        public void OnMockupRequested() { }
+        public void OnStartExperienceRequested() { }
+        public void OnLoadingProgressChanged(float progress) { }
+        public void OnGyroscopeToggled(bool enabled) => _useGyroscope = enabled;
 
         private void ApplyRotation(float dx, float dy)
         {
@@ -139,48 +141,36 @@ namespace Twinny.Mobile.Camera
             _panTilt.TiltAxis = vertical;
         }
 
-        private void ApplyPan(Vector2 direction)
+        private void ApplyGyroRotation(Vector3 tiltRotation)
         {
+            if (!_useGyroscope) return;
             if (!IsActiveCamera()) return;
-            Transform reference = GetPanReference();
-            if (reference == null) return;
+            if (_panTilt == null) return;
+            if (Twinny.Mobile.Input.MobileInputProvider.CurrentData.TouchCount > 0) return;
 
-            Transform panTarget = _panTarget ?? ResolvePanTarget();
-            if (panTarget == null) return;
+            float yawDelta = Mathf.Abs(tiltRotation.y) > _gyroDeadZone ? -tiltRotation.y * _gyroYawSpeed * _gyroScale : 0f;
+            float pitchDelta = Mathf.Abs(tiltRotation.x) > _gyroDeadZone ? tiltRotation.x * _gyroPitchSpeed * _gyroScale : 0f;
+            if (Mathf.Approximately(yawDelta, 0f) && Mathf.Approximately(pitchDelta, 0f)) return;
 
-            Vector3 right = reference.right;
-            Vector3 up = reference.up;
-            Vector3 move = (right * direction.x + up * direction.y) * (_panSpeed * Time.deltaTime);
-            if (_panUseLocalSpace && panTarget.parent != null)
-            {
-                Vector3 localMove = panTarget.parent.InverseTransformVector(move);
-                panTarget.localPosition += localMove;
-            }
-            else
-            {
-                panTarget.position += move;
-            }
+            var horizontal = _panTilt.PanAxis;
+            horizontal.Value += yawDelta;
+            _panTilt.PanAxis = horizontal;
+
+            var vertical = _panTilt.TiltAxis;
+            float next = vertical.Value - pitchDelta;
+            vertical.Value = Mathf.Clamp(next, _verticalAxisLimits.x, _verticalAxisLimits.y);
+            _panTilt.TiltAxis = vertical;
         }
 
-        private void BeginPanIfNeeded()
+        private void DisableRecentering()
         {
-            if (_isPanning) return;
-            _isPanning = true;
-            _panTarget = ResolvePanTarget();
-            _panUseLocalSpace = _panTarget == _panPivot && _panTarget != null && _panTarget.parent != null;
-            if (_panTarget != null)
-            {
-                _panOriginPosition = _panTarget.position;
-                _panOriginLocalPosition = _panUseLocalSpace ? Vector3.zero : _panTarget.localPosition;
-            }
-        }
-
-        private void EndPan()
-        {
-            if (!_isPanning) return;
-            _isPanning = false;
-            if (_returnPanToOriginOnRelease && _panTarget != null)
-                _isReturningPan = true;
+            if (_panTilt == null) return;
+            var pan = _panTilt.PanAxis;
+            var tilt = _panTilt.TiltAxis;
+            pan.Recentering.Enabled = false;
+            tilt.Recentering.Enabled = false;
+            _panTilt.PanAxis = pan;
+            _panTilt.TiltAxis = tilt;
         }
 
         private void EnsureReferences()
@@ -195,74 +185,17 @@ namespace Twinny.Mobile.Camera
                 _panTilt = GetComponent<CinemachinePanTilt>();
         }
 
+        private void ApplyMode(bool isActive)
+        {
+            _isModeActive = isActive;
+            if (_cinemachineCamera != null)
+                _cinemachineCamera.Priority = isActive ? _activePriority : _inactivePriority;
+        }
+
         private void ClampLimits()
         {
             if (_verticalAxisLimits.y < _verticalAxisLimits.x)
                 _verticalAxisLimits.x = _verticalAxisLimits.y;
-        }
-
-        private Transform GetPanReference()
-        {
-            if (_cinemachineCamera != null) return _cinemachineCamera.transform;
-            if (UnityEngine.Camera.main != null) return UnityEngine.Camera.main.transform;
-            return null;
-        }
-
-        private Transform GetPanTarget()
-        {
-            switch (_panTargetMode)
-            {
-                case PanTargetMode.CameraTransform:
-                    return _cinemachineCamera != null ? _cinemachineCamera.transform : transform;
-                case PanTargetMode.TrackingTarget:
-                    return _panPivot != null ? _panPivot : _cinemachineCamera != null ? _cinemachineCamera.Follow : null;
-                case PanTargetMode.LookAtTarget:
-                    return _cinemachineCamera != null ? _cinemachineCamera.LookAt : null;
-                case PanTargetMode.CustomTransform:
-                    return _customPanTarget;
-                default:
-                    return null;
-            }
-        }
-
-        private Transform ResolvePanTarget()
-        {
-            var target = GetPanTarget();
-            if (target != null) return target;
-            if (_cinemachineCamera != null) return _cinemachineCamera.transform;
-            return transform;
-        }
-
-        private void SetupPanPivot()
-        {
-            if (_panTargetMode != PanTargetMode.TrackingTarget) return;
-            if (_cinemachineCamera == null || _cinemachineCamera.Follow == null) return;
-            if (_panPivot != null) return;
-
-            _originalFollow = _cinemachineCamera.Follow;
-            _panPivot = CreatePanPivot(_originalFollow);
-            _cinemachineCamera.Follow = _panPivot;
-        }
-
-        private void RestorePanPivot()
-        {
-            if (_cinemachineCamera != null && _originalFollow != null && _cinemachineCamera.Follow == _panPivot)
-                _cinemachineCamera.Follow = _originalFollow;
-
-            if (_panPivot != null)
-                Destroy(_panPivot.gameObject);
-
-            _panPivot = null;
-            _originalFollow = null;
-        }
-
-        private static Transform CreatePanPivot(Transform parent)
-        {
-            var pivot = new GameObject("PanPivot").transform;
-            pivot.SetParent(parent, false);
-            pivot.localPosition = Vector3.zero;
-            pivot.localRotation = Quaternion.identity;
-            return pivot;
         }
 
         private void CacheDefaultFov()
@@ -305,60 +238,9 @@ namespace Twinny.Mobile.Camera
                 _zoomRequested = false;
         }
 
-        private void UpdatePanReturn()
-        {
-            if (!IsActiveCamera()) return;
-            Transform panTarget = _panTarget ?? ResolvePanTarget();
-            if (!_isReturningPan || panTarget == null) return;
-
-            float smoothTime = 1f / Mathf.Max(0.01f, _panReturnSpeed);
-            if (_panUseLocalSpace && panTarget.parent != null)
-            {
-                panTarget.localPosition = Vector3.SmoothDamp(
-                    panTarget.localPosition,
-                    _panOriginLocalPosition,
-                    ref _panReturnVelocity,
-                    smoothTime
-                );
-            }
-            else
-            {
-                panTarget.position = Vector3.SmoothDamp(
-                    panTarget.position,
-                    _panOriginPosition,
-                    ref _panReturnVelocity,
-                    smoothTime
-                );
-            }
-
-            Vector3 currentPos = _panUseLocalSpace ? panTarget.localPosition : panTarget.position;
-            Vector3 targetPos = _panUseLocalSpace ? _panOriginLocalPosition : _panOriginPosition;
-            if (Vector3.SqrMagnitude(currentPos - targetPos) <= 0.0001f)
-            {
-                if (_panUseLocalSpace)
-                    panTarget.localPosition = _panOriginLocalPosition;
-                else
-                    panTarget.position = _panOriginPosition;
-                _panReturnVelocity = Vector3.zero;
-                _isReturningPan = false;
-                _panTarget = null;
-            }
-        }
-
-#if UNITY_EDITOR
-        private void UpdateEditorPanRelease()
-        {
-            if (!IsActiveCamera()) return;
-            if (!_isPanning) return;
-            bool left = UnityEngine.Input.GetMouseButton(0);
-            bool right = UnityEngine.Input.GetMouseButton(1);
-            if (!left || !right)
-                EndPan();
-        }
-#endif
-
         private bool IsActiveCamera()
         {
+            if (!_isModeActive) return false;
             EnsureReferences();
             if (_cinemachineCamera == null) return false;
 

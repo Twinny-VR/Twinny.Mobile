@@ -1,9 +1,9 @@
 using System.Reflection;
 using Concept.Core;
-using Twinny.Mobile;
 using Twinny.Core.Input;
 using UnityEngine;
 using Unity.Cinemachine;
+using UnityEngine.SceneManagement;
 
 namespace Twinny.Mobile.Camera
 {
@@ -12,7 +12,7 @@ namespace Twinny.Mobile.Camera
     /// </summary>
     [RequireComponent(typeof(CinemachineCamera))]
     [RequireComponent(typeof(CinemachineOrbitalFollow))]
-    public class MobileCinemachineOrbitalHandler : MonoBehaviour, IMobileInputCallbacks
+    public class MobileCinemachineOrbitalHandler : MonoBehaviour, IMobileInputCallbacks, ITwinnyMobileCallbacks
     {
         public enum PanTargetMode
         {
@@ -25,6 +25,10 @@ namespace Twinny.Mobile.Camera
         [Header("Cinemachine")]
         [SerializeField] private CinemachineCamera _cinemachineCamera;
         [SerializeField] private CinemachineOrbitalFollow _orbitalFollow;
+
+        [Header("Mode")]
+        [SerializeField] private int _activePriority = 20;
+        [SerializeField] private int _inactivePriority = 5;
 
         [Header("Tuning")]
         [SerializeField] private float _rotateSpeed = 0.1f;
@@ -45,6 +49,7 @@ namespace Twinny.Mobile.Camera
         private bool _isReturningPan;
         private Vector3 _panOriginPosition;
         private Vector3 _panReturnVelocity;
+        private bool _isModeActive = true;
 
         private void Update()
         {
@@ -56,12 +61,15 @@ namespace Twinny.Mobile.Camera
         {
             EnsureReferences();
             CacheOrbitalMembers();
+            ApplyMode(_isModeActive);
             CallbackHub.RegisterCallback<IMobileInputCallbacks>(this);
+            CallbackHub.RegisterCallback<ITwinnyMobileCallbacks>(this);
         }
 
         private void OnDisable()
         {
             CallbackHub.UnregisterCallback<IMobileInputCallbacks>(this);
+            CallbackHub.UnregisterCallback<ITwinnyMobileCallbacks>(this);
         }
 
         private void OnValidate()
@@ -120,6 +128,27 @@ namespace Twinny.Mobile.Camera
         public void OnAccessibilityAction(string actionName) { }
         public void OnScreenReaderGesture(string gestureType) { }
         public void OnNotificationAction(bool isQuickAction) { }
+
+        public void OnStartInteract(GameObject gameObject) { }
+        public void OnStopInteract(GameObject gameObject) { }
+        public void OnStartTeleport() { }
+        public void OnTeleport() { }
+
+        public void OnPlatformInitializing() { }
+        public void OnPlatformInitialized() { }
+        public void OnExperienceReady() { }
+        public void OnExperienceStarting() { }
+        public void OnExperienceStarted() { }
+        public void OnExperienceEnding() { }
+        public void OnExperienceEnded(bool isRunning) { }
+        public void OnExperienceLoaded() { }
+        public void OnSceneLoadStart(string sceneName) { }
+        public void OnSceneLoaded(Scene scene) { }
+        public void OnTeleportToLandMark(int landMarkIndex) { }
+        public void OnSkyboxHDRIChanged(Material material) { }
+
+        public void OnEnterImmersiveMode() => ApplyMode(false);
+        public void OnEnterMockupMode() => ApplyMode(true);
 
         private void ApplyRotation(float dx, float dy)
         {
@@ -202,6 +231,13 @@ namespace Twinny.Mobile.Camera
 
             if (_orbitalFollow == null)
                 _orbitalFollow = GetComponent<CinemachineOrbitalFollow>();
+        }
+
+        private void ApplyMode(bool isActive)
+        {
+            _isModeActive = isActive;
+            if (_cinemachineCamera != null)
+                _cinemachineCamera.Priority = isActive ? _activePriority : _inactivePriority;
         }
 
         private void ClampLimits()
@@ -300,6 +336,7 @@ namespace Twinny.Mobile.Camera
 
         private bool IsActiveCamera()
         {
+            if (!_isModeActive) return false;
             EnsureReferences();
             if (_cinemachineCamera == null) return false;
 

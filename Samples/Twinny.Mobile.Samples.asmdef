@@ -1,0 +1,18 @@
+{
+    "name": "Twinny.Mobile.Samples",
+    "rootNamespace": "Twinny.Mobile.Samples",
+    "references": [
+        "Twinny.Mobile",
+        "Twinny.Core",
+        "ConceptFactory.Core"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

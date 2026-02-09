@@ -1,6 +1,7 @@
 using Twinny.Core.Input;
 using UnityEngine;
 using UnityEngine.EventSystems;
+using UnityEngine.UIElements;
 using System.Collections.Generic;
 using System;
 using Concept.Core;
@@ -39,9 +40,12 @@ namespace Twinny.Mobile.Input
         private Vector2 _lastThreeFingerCenter;
         private float _lastThreeFingerDistance;
         private Vector3 _lastDeviceRotation;
+        [SerializeField] private float _gyroTiltThreshold = 0.5f;
         private bool _isScreenReaderActive;
         private bool _warnedMissingSettings;
         private bool _warnedMissingRouter;
+        private UIDocument[] _uiDocuments;
+        private int _uiDocumentsFrame;
 
 #if (UNITY_ANDROID || UNITY_IOS) && !UNITY_EDITOR
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
@@ -157,7 +161,7 @@ namespace Twinny.Mobile.Input
             return;
 #endif
             EnsureSettingsLoaded();
-            if (EventSystem.current?.IsPointerOverGameObject() == true) return;
+            if (IsPointerOverUi()) return;
 
             int touchCount = UnityInput.touchCount;
 
@@ -177,6 +181,56 @@ namespace Twinny.Mobile.Input
 
             // Check for accessibility actions
             CheckAccessibilityActions();
+        }
+
+        private bool IsPointerOverUi()
+        {
+            if (UnityInput.touchCount <= 0) return false;
+
+            for (int i = 0; i < UnityInput.touchCount; i++)
+            {
+                Touch touch = UnityInput.GetTouch(i);
+                if (EventSystem.current?.IsPointerOverGameObject(touch.fingerId) == true)
+                    return true;
+
+                if (IsPointerOverUiToolkit(touch.position))
+                    return true;
+            }
+
+            return false;
+        }
+
+        private bool IsPointerOverUiToolkit(Vector2 screenPosition)
+        {
+            UIDocument[] documents = GetUiDocuments();
+            if (documents == null || documents.Length == 0) return false;
+
+            for (int i = 0; i < documents.Length; i++)
+            {
+                UIDocument document = documents[i];
+                if (document == null || document.rootVisualElement == null) continue;
+
+                var panel = document.rootVisualElement.panel;
+                if (panel == null) continue;
+
+                Vector2 panelPosition = RuntimePanelUtils.ScreenToPanel(panel, screenPosition);
+                VisualElement picked = panel.Pick(panelPosition);
+                if (picked != null && picked.pickingMode != PickingMode.Ignore)
+                    return true;
+            }
+
+            return false;
+        }
+
+        private UIDocument[] GetUiDocuments()
+        {
+            if (_uiDocuments == null || (Time.frameCount - _uiDocumentsFrame) > 30)
+            {
+                _uiDocuments = FindObjectsOfType<UIDocument>();
+                _uiDocumentsFrame = Time.frameCount;
+            }
+
+            return _uiDocuments;
         }
 
         #region Touch Handlers
@@ -272,23 +326,29 @@ namespace Twinny.Mobile.Input
                     _twoFingerLongPressDetected = false;
                 }
 
-                // Pinch zoom
-                float delta = (currentDist - _lastPinchDist) * 0.01f;
-                router.Zoom(delta);
+                float pinchDelta = (currentDist - _lastPinchDist) * 0.01f;
+                if (pinchDelta < 0f) pinchDelta = 0f;
                 _lastPinchDist = currentDist;
 
-                // Fire both CallbackHub and Action event
-                MobileInputEvents.PinchZoom(delta);
-
-                // Two-finger swipe
                 Vector2 avgDelta = (t0.deltaPosition + t1.deltaPosition) / 2;
                 Vector2 centerPos = (t0.position + t1.position) / 2;
 
-                // Fire both events
-                CallbackHub.CallAction<IMobileInputCallbacks>(
-                    cb => cb.OnTwoFingerSwipe(avgDelta.normalized, centerPos)
-                );
-                MobileInputEvents.Drag(avgDelta.normalized, centerPos);
+                // Decide between pinch and pan to avoid mixing signals
+                float pinchAbs = Mathf.Abs(pinchDelta);
+                float panAbs = avgDelta.magnitude * 0.01f;
+                const float switchRatio = 1.6f;
+                if (pinchAbs > panAbs * switchRatio)
+                {
+                    router.Zoom(pinchDelta);
+                    MobileInputEvents.PinchZoom(pinchDelta);
+                }
+                else if (panAbs > pinchAbs * switchRatio && avgDelta.sqrMagnitude > 0.0001f)
+                {
+                    CallbackHub.CallAction<IMobileInputCallbacks>(
+                        cb => cb.OnTwoFingerSwipe(avgDelta.normalized, centerPos)
+                    );
+                    MobileInputEvents.Drag(avgDelta.normalized, centerPos);
+                }
 
                 // Two-finger long press detection
                 if (!_twoFingerLongPressDetected &&
@@ -434,17 +494,16 @@ namespace Twinny.Mobile.Input
             // Detect tilt using gyroscope
             if (SystemInfo.supportsGyroscope)
             {
-                Vector3 currentRotation = UnityInput.gyro.attitude.eulerAngles;
-                Vector3 deltaRotation = currentRotation - _lastDeviceRotation;
-
-                if (deltaRotation.magnitude > 5f) // Threshold in degrees
+                Vector3 rate = UnityInput.gyro.rotationRateUnbiased * Mathf.Rad2Deg;
+                if (rate.sqrMagnitude > _gyroTiltThreshold * _gyroTiltThreshold)
                 {
                     CallbackHub.CallAction<IMobileInputCallbacks>(
-                        cb => cb.OnTilt(deltaRotation)
+                        cb => cb.OnTilt(rate)
                     );
-                    MobileInputEvents.Tap(deltaRotation);
-                    _lastDeviceRotation = currentRotation;
+                    MobileInputEvents.Tap(rate);
                 }
+
+                _lastDeviceRotation = UnityInput.gyro.attitude.eulerAngles;
             }
 
             // Detect orientation change
@@ -535,6 +594,7 @@ namespace Twinny.Mobile.Input
         {
             var router = TryGetRouter();
             if (router == null) return;
+            if (_isDragging) return;
 
             // Raycast for object selection
             var cam = GetRaycastCamera();
