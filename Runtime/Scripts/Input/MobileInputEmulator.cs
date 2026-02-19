@@ -1,4 +1,4 @@
-#if UNITY_EDITOR
+#if UNITY_EDITOR || UNITY_WEBGL
 using Concept.Core;
 using Twinny.Core.Input;
 using UnityEngine;
@@ -42,9 +42,23 @@ namespace Twinny.Mobile.Input
         private bool _mousePinchDown;
         private Vector3 _lastMousePinchPos;
 
+        private void Awake()
+        {
+#if UNITY_WEBGL && !UNITY_EDITOR
+            if (SystemInfo.deviceType == DeviceType.Handheld)
+            {
+                Destroy(gameObject);
+                return;
+            }
+#endif
+        }
+
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void Initialize()
         {
+#if UNITY_WEBGL && !UNITY_EDITOR
+            if (SystemInfo.deviceType == DeviceType.Handheld) return;
+#endif
             if (FindAnyObjectByType<MobileInputEmulator>() != null) return;
             var emulatorObject = new GameObject("MobileInputEmulator");
             emulatorObject.AddComponent<MobileInputEmulator>();
