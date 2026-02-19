@@ -51,7 +51,7 @@ namespace Twinny.Mobile.Input
         private UIDocument[] _uiDocuments;
         private int _uiDocumentsFrame;
 
-#if (UNITY_ANDROID || UNITY_IOS) && !UNITY_EDITOR
+#if (UNITY_ANDROID || UNITY_IOS || UNITY_WEBGL) && !UNITY_EDITOR
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void Initialize()
         {
