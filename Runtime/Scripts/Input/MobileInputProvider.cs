@@ -57,7 +57,7 @@ namespace Twinny.Mobile.Input
         private static void Initialize()
         {
 #if UNITY_WEBGL
-            if (!Application.isMobilePlatform && SystemInfo.deviceType != DeviceType.Handheld && !UnityInput.touchSupported) return;
+            if (!IsWebGlMobileBrowser()) return;
 #endif
             if (FindAnyObjectByType<MobileInputProvider>() != null) return;
             var providerObject = new GameObject("MobileInputProvider");
@@ -82,7 +82,12 @@ namespace Twinny.Mobile.Input
             public static int TouchCount => UnityInput.touchCount;
             public static Touch[] Touches => UnityInput.touches;
             public static Vector3 Acceleration => UnityInput.acceleration;
-            public static DeviceOrientation Orientation => UnityInput.deviceOrientation;
+            public static DeviceOrientation Orientation =>
+#if UNITY_WEBGL && !UNITY_EDITOR
+                DeviceOrientation.Unknown;
+#else
+                UnityInput.deviceOrientation;
+#endif
             public static bool IsDragging => Instance?._isDragging ?? false;
             public static bool IsDevicePickedUp => Instance?._isDevicePickedUp ?? false;
             public static bool IsScreenReaderActive => Instance?._isScreenReaderActive ?? false;
@@ -123,7 +128,7 @@ namespace Twinny.Mobile.Input
             {
                 get
                 {
-                    if (SystemInfo.supportsGyroscope && UnityInput.gyro.enabled)
+                    if (Instance != null && Instance.CanUseGyroscope() && UnityInput.gyro.enabled)
                         return UnityInput.gyro.attitude.eulerAngles;
                     return null;
                 }
@@ -140,7 +145,7 @@ namespace Twinny.Mobile.Input
         {
             base.Awake();
 #if UNITY_WEBGL && !UNITY_EDITOR
-            if (!Application.isMobilePlatform && SystemInfo.deviceType != DeviceType.Handheld && !UnityInput.touchSupported)
+            if (!IsWebGlMobileBrowser())
             {
                 Destroy(gameObject);
                 return;
@@ -152,8 +157,8 @@ namespace Twinny.Mobile.Input
         {
             base.Start();
             EnsureSettingsLoaded();
-            _lastOrientation = UnityInput.deviceOrientation;
-            if (SystemInfo.supportsGyroscope)
+            _lastOrientation = CanUseDeviceOrientation() ? UnityInput.deviceOrientation : DeviceOrientation.Unknown;
+            if (CanUseGyroscope())
             {
                 UnityInput.gyro.enabled = true;
                 _lastDeviceRotation = UnityInput.gyro.attitude.eulerAngles;
@@ -617,7 +622,7 @@ namespace Twinny.Mobile.Input
             _lastAcceleration = acceleration;
 
             // Detect tilt using gyroscope
-            if (SystemInfo.supportsGyroscope)
+            if (CanUseGyroscope())
             {
                 Vector3 rate = UnityInput.gyro.rotationRateUnbiased * Mathf.Rad2Deg;
                 if (rate.sqrMagnitude > _gyroTiltThreshold * _gyroTiltThreshold)
@@ -632,7 +637,8 @@ namespace Twinny.Mobile.Input
             }
 
             // Detect orientation change
-            if (UnityInput.deviceOrientation != _lastOrientation &&
+            if (CanUseDeviceOrientation() &&
+                UnityInput.deviceOrientation != _lastOrientation &&
                 UnityInput.deviceOrientation != DeviceOrientation.Unknown)
             {
                 _lastOrientation = UnityInput.deviceOrientation;
@@ -918,6 +924,31 @@ namespace Twinny.Mobile.Input
         {
             if (Camera.main != null) return Camera.main;
             return FindAnyObjectByType<Camera>();
+        }
+
+#if UNITY_WEBGL && !UNITY_EDITOR
+        private static bool IsWebGlMobileBrowser()
+        {
+            return Application.isMobilePlatform || SystemInfo.deviceType == DeviceType.Handheld;
+        }
+#endif
+
+        private bool CanUseGyroscope()
+        {
+#if UNITY_WEBGL && !UNITY_EDITOR
+            return false;
+#else
+            return SystemInfo.supportsGyroscope;
+#endif
+        }
+
+        private bool CanUseDeviceOrientation()
+        {
+#if UNITY_WEBGL && !UNITY_EDITOR
+            return false;
+#else
+            return true;
+#endif
         }
 
         #region Public API
