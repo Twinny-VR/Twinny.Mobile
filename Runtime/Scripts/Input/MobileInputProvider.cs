@@ -25,6 +25,7 @@ namespace Twinny.Mobile.Input
         // Internal state variables
         private Vector2 _touchStartPos;
         private float _touchStartTime;
+        private Vector2 _lastMousePos;
         private bool _isDragging;
         private float _lastPinchDist;
         private DeviceOrientation _lastOrientation;
@@ -174,6 +175,7 @@ namespace Twinny.Mobile.Input
             else if (touchCount == 2) HandleTwoFingers();
             else if (touchCount == 3) HandleThreeFingers();
             else if (touchCount == 4) HandleFourFingers();
+            else if (touchCount == 0) HandleMouseInput();
 
             // Update touch histories for long press detection
             UpdateTouchHistories();
@@ -189,7 +191,16 @@ namespace Twinny.Mobile.Input
 
         private bool IsPointerOverUi()
         {
-            if (UnityInput.touchCount <= 0) return false;
+            if (UnityInput.touchCount <= 0)
+            {
+                if (EventSystem.current?.IsPointerOverGameObject() == true)
+                    return true;
+
+                if (IsPointerOverUiToolkit(UnityInput.mousePosition))
+                    return true;
+
+                return false;
+            }
 
             for (int i = 0; i < UnityInput.touchCount; i++)
             {
@@ -301,6 +312,67 @@ namespace Twinny.Mobile.Input
                     router.Cancel();
                     _touchHistories.Remove(t.fingerId);
                     break;
+            }
+        }
+
+        private void HandleMouseInput()
+        {
+            if (_settings == null) return;
+
+            bool isMouseDown = UnityInput.GetMouseButtonDown(0);
+            bool isMouseUp = UnityInput.GetMouseButtonUp(0);
+            bool isMouseHeld = UnityInput.GetMouseButton(0);
+
+            if (!isMouseDown && !isMouseUp && !isMouseHeld) return;
+
+            var router = TryGetRouter();
+            if (router == null) return;
+
+            Vector2 currentMousePos = UnityInput.mousePosition;
+
+            if (isMouseDown)
+            {
+                _touchStartPos = currentMousePos;
+                _touchStartTime = Time.time;
+                _isDragging = false;
+                _lastMousePos = currentMousePos;
+
+                _touchHistories[-1] = new TouchHistory
+                {
+                    startPosition = currentMousePos,
+                    startTime = Time.time,
+                    isLongPressTriggered = false
+                };
+
+                router.PrimaryDown(currentMousePos.x, currentMousePos.y);
+            }
+            else if (isMouseHeld)
+            {
+                Vector2 delta = currentMousePos - _lastMousePos;
+
+                if (!_isDragging && Vector2.Distance(currentMousePos, _touchStartPos) > _settings.DragThreshold)
+                {
+                    _isDragging = true;
+                }
+
+                if (_isDragging)
+                {
+                    router.PrimaryDrag(delta.x, delta.y);
+                    MobileInputEvents.Drag(delta, currentMousePos);
+                }
+
+                _lastMousePos = currentMousePos;
+            }
+            else if (isMouseUp)
+            {
+                if (!_isDragging)
+                {
+                    ProcessTap(currentMousePos);
+                    MobileInputEvents.Tap(currentMousePos);
+                }
+                router.PrimaryUp(currentMousePos.x, currentMousePos.y);
+
+                _touchHistories.Remove(-1);
             }
         }
 
@@ -628,7 +700,7 @@ namespace Twinny.Mobile.Input
         /// <summary>
         /// Processes a single tap, performs raycast selection, and invokes force touch callbacks if supported.
         /// </summary>
-        private void ProcessTap(Touch t)
+        private void ProcessTap(Vector2 position)
         {
             var router = TryGetRouter();
             if (router == null) return;
@@ -642,7 +714,7 @@ namespace Twinny.Mobile.Input
                 return;
             }
 
-            Ray ray = cam.ScreenPointToRay(t.position);
+            Ray ray = cam.ScreenPointToRay(position);
             if (Physics.Raycast(ray, out RaycastHit hit))
             {
                 Debug.Log($"[MobileInputProvider] Tap hit {hit.collider.name} at {hit.point}");
@@ -654,6 +726,11 @@ namespace Twinny.Mobile.Input
                 Debug.Log("[MobileInputProvider] Tap hit nothing.");
                 router.Cancel();
             }
+        }
+
+        private void ProcessTap(Touch t)
+        {
+            ProcessTap(t.position);
 
             // Force touch detection
             if (UnityInput.touchPressureSupported && t.maximumPossiblePressure > 0)
