@@ -28,6 +28,10 @@ namespace Twinny.Mobile.Input
         private bool _isDragging;
         private float _lastPinchDist;
         private DeviceOrientation _lastOrientation;
+        private bool _isZooming;
+        private bool _isPanning;
+        private float _startPinchDist;
+        private Vector2 _startPanCenter;
 
         // New state variables for missing features
         private Dictionary<int, TouchHistory> _touchHistories = new Dictionary<int, TouchHistory>();
@@ -313,41 +317,64 @@ namespace Twinny.Mobile.Input
             Touch t0 = UnityInput.GetTouch(0);
             Touch t1 = UnityInput.GetTouch(1);
 
+            float currentDist = Vector2.Distance(t0.position, t1.position);
+
+            // Initialize on begin
+            if (t0.phase == TouchPhase.Began || t1.phase == TouchPhase.Began)
+            {
+                _lastPinchDist = currentDist;
+                _lastTwoFingerPressTime = Time.time;
+                _twoFingerLongPressDetected = false;
+                _isZooming = false;
+                _isPanning = false;
+                _startPinchDist = currentDist;
+                _startPanCenter = (t0.position + t1.position) / 2;
+            }
+
             // Two-finger pinch (zoom)
             if (t0.phase == TouchPhase.Moved || t1.phase == TouchPhase.Moved)
             {
-                float currentDist = Vector2.Distance(t0.position, t1.position);
-
-                // Initialize on begin
-                if (t0.phase == TouchPhase.Began || t1.phase == TouchPhase.Began)
-                {
-                    _lastPinchDist = currentDist;
-                    _lastTwoFingerPressTime = Time.time;
-                    _twoFingerLongPressDetected = false;
-                }
-
-                float pinchDelta = (currentDist - _lastPinchDist) * 0.01f;
-                if (pinchDelta < 0f) pinchDelta = 0f;
-                _lastPinchDist = currentDist;
-
                 Vector2 avgDelta = (t0.deltaPosition + t1.deltaPosition) / 2;
                 Vector2 centerPos = (t0.position + t1.position) / 2;
 
-                // Decide between pinch and pan to avoid mixing signals
-                float pinchAbs = Mathf.Abs(pinchDelta);
-                float panAbs = avgDelta.magnitude * 0.01f;
-                const float switchRatio = 1.6f;
-                if (pinchAbs > panAbs * switchRatio)
+                // Lock gesture type on start
+                if (!_isZooming && !_isPanning)
+                {
+                    float totalZoom = Mathf.Abs(currentDist - _startPinchDist);
+                    float totalPan = (centerPos - _startPanCenter).magnitude;
+                    float threshold = _settings.DragThreshold;
+
+                    if (totalZoom > threshold || totalPan > threshold)
+                    {
+                        if (totalZoom > totalPan) _isZooming = true;
+                        else _isPanning = true;
+                        _lastPinchDist = currentDist; // Sync to avoid jump
+                    }
+                    else
+                    {
+                        _lastPinchDist = currentDist; // Keep syncing while waiting
+                        return;
+                    }
+                }
+
+                float distDelta = currentDist - _lastPinchDist;
+                float pinchDelta = distDelta * 0.01f;
+                _lastPinchDist = currentDist;
+
+                // Zoom
+                if (_isZooming && Mathf.Abs(pinchDelta) > 0.0001f)
                 {
                     router.Zoom(pinchDelta);
                     MobileInputEvents.PinchZoom(pinchDelta);
                 }
-                else if (panAbs > pinchAbs * switchRatio && avgDelta.sqrMagnitude > 0.0001f)
+                // Pan (Two Finger Swipe)
+                else if (_isPanning && avgDelta.sqrMagnitude > 1.0f)
                 {
+                    Vector2 direction = avgDelta.normalized;
                     CallbackHub.CallAction<IMobileInputCallbacks>(
-                        cb => cb.OnTwoFingerSwipe(avgDelta.normalized, centerPos)
+                        cb => cb.OnTwoFingerSwipe(direction, centerPos)
                     );
-                    MobileInputEvents.Drag(avgDelta.normalized, centerPos);
+                    MobileInputEvents.Drag(direction, centerPos);
                 }
 
                 // Two-finger long press detection
@@ -362,6 +389,17 @@ namespace Twinny.Mobile.Input
                     );
                     MobileInputEvents.Tap(centerPos);
                 }
+            }
+
+            // Handle end of two-finger gesture (pan release)
+            if (t0.phase == TouchPhase.Ended || t1.phase == TouchPhase.Ended ||
+                t0.phase == TouchPhase.Canceled || t1.phase == TouchPhase.Canceled)
+            {
+                Vector2 center = (t0.position + t1.position) / 2;
+                CallbackHub.CallAction<IMobileInputCallbacks>(
+                    cb => cb.OnTwoFingerSwipe(Vector2.zero, center)
+                );
+                MobileInputEvents.Drag(Vector2.zero, center);
             }
 
             // Two-finger tap detection

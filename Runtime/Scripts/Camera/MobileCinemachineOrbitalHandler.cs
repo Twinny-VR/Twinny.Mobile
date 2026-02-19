@@ -37,6 +37,8 @@ namespace Twinny.Mobile.Camera
         [SerializeField] private float _panSpeed = 6f;
         [SerializeField] private float _panReturnSpeed = 3f;
         [SerializeField] private float _zoomSpeed = 3f;
+        [SerializeField] private bool _enablePanLimit;
+        [SerializeField] private float _maxPanDistance = 10f;
         [SerializeField] private Vector2 _verticalAxisLimits = new Vector2(-80f, 80f);
         [SerializeField] private Vector2 _radiusLimits = new Vector2(0.5f, 50f);
         [SerializeField] private PanTargetMode _panTargetMode = PanTargetMode.TrackingTarget;
@@ -50,6 +52,8 @@ namespace Twinny.Mobile.Camera
         private Vector3 _panOriginPosition;
         private Vector3 _panReturnVelocity;
         private bool _isModeActive = true;
+        private Vector3 _initialPanTargetPosition;
+        private bool _hasInitialPosition;
 
         private void Update()
         {
@@ -61,6 +65,7 @@ namespace Twinny.Mobile.Camera
         {
             EnsureReferences();
             CacheOrbitalMembers();
+            InitializePanLimit();
             ApplyMode(_isModeActive);
             CallbackHub.RegisterCallback<IMobileInputCallbacks>(this);
             CallbackHub.RegisterCallback<ITwinnyMobileCallbacks>(this);
@@ -176,16 +181,41 @@ namespace Twinny.Mobile.Camera
 
             Vector3 right = reference.right;
             Vector3 up = reference.up;
-            Vector3 move = (right * direction.x + up * direction.y) * (_panSpeed * Time.deltaTime);
-            panTarget.position += move;
+            
+            // Initialize limit origin if not set yet
+            if (_enablePanLimit && !_hasInitialPosition)
+            {
+                _initialPanTargetPosition = panTarget.position;
+                _hasInitialPosition = true;
+            }
+
+            // Normalize sensitivity based on screen height (Reference: 1080p)
+            float screenScale = 1080f / Mathf.Max(Screen.height, 1);
+
+            // Invert input for natural "drag world" feel and scale for pixel coordinates
+            Vector3 move = (right * direction.x + up * direction.y) * (_panSpeed * 0.002f * screenScale);
+            Vector3 finalPos = panTarget.position + move;
+
+            if (_enablePanLimit)
+            {
+                Vector3 offset = finalPos - _initialPanTargetPosition;
+                finalPos = _initialPanTargetPosition + Vector3.ClampMagnitude(offset, _maxPanDistance);
+            }
+
+            panTarget.position = finalPos;
         }
 
         private void BeginPanIfNeeded()
         {
+            // Se estava voltando, cancela o retorno para dar prioridade ao dedo do usuário.
+            bool wasReturning = _isReturningPan;
+            _isReturningPan = false;
+
             if (_isPanning) return;
             _isPanning = true;
             Transform panTarget = GetPanTarget();
-            if (panTarget != null)
+            // Só redefine a origem se não estivesse no meio de um retorno (evita drift da origem)
+            if (panTarget != null && !wasReturning)
                 _panOriginPosition = panTarget.position;
         }
 
@@ -331,6 +361,16 @@ namespace Twinny.Mobile.Camera
                     return _customPanTarget;
                 default:
                     return null;
+            }
+        }
+
+        private void InitializePanLimit()
+        {
+            Transform target = GetPanTarget();
+            if (target != null && !_hasInitialPosition)
+            {
+                _initialPanTargetPosition = target.position;
+                _hasInitialPosition = true;
             }
         }
 
