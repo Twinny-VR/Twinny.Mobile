@@ -45,7 +45,7 @@ namespace Twinny.Mobile.Input
         private void Awake()
         {
 #if UNITY_WEBGL && !UNITY_EDITOR
-            if (SystemInfo.deviceType == DeviceType.Handheld)
+            if (Application.isMobilePlatform || SystemInfo.deviceType == DeviceType.Handheld || UnityEngine.Input.touchSupported)
             {
                 Destroy(gameObject);
                 return;
@@ -57,7 +57,7 @@ namespace Twinny.Mobile.Input
         private static void Initialize()
         {
 #if UNITY_WEBGL && !UNITY_EDITOR
-            if (SystemInfo.deviceType == DeviceType.Handheld) return;
+            if (Application.isMobilePlatform || SystemInfo.deviceType == DeviceType.Handheld || UnityEngine.Input.touchSupported) return;
 #endif
             if (FindAnyObjectByType<MobileInputEmulator>() != null) return;
             var emulatorObject = new GameObject("MobileInputEmulator");
