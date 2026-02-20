@@ -63,6 +63,8 @@ namespace Twinny.Mobile.Camera
         private float _panLockVerticalAxis;
         private bool _hasPanLockAxes;
         private readonly List<SuspendedHardLookState> _suspendedHardLookStates = new List<SuspendedHardLookState>();
+        private bool _isHardLookSuspended;
+        private Transform _suspendedLookAtTarget;
         private Coroutine _hardLookRestoreRoutine;
 
         private struct SuspendedHardLookState
@@ -182,6 +184,7 @@ namespace Twinny.Mobile.Camera
         {
             if (!IsActiveCamera()) return;
             if (_orbitalFollow == null) return;
+            RestoreHardLookAfterPan();
             if (_lockRotationWhileTwoFingerPan && _isPanning) return;
 
             var horizontal = _orbitalFollow.HorizontalAxis;
@@ -214,8 +217,17 @@ namespace Twinny.Mobile.Camera
             // Normalize sensitivity based on screen height (Reference: 1080p)
             float screenScale = 1080f / Mathf.Max(Screen.height, 1);
 
+            // Dynamic speed based on zoom (radius)
+            float zoomFactor = 1f;
+            float currentRadius = GetRadius();
+            // Use max radius as baseline to preserve the "perfect" speed at distance
+            if (!float.IsNaN(currentRadius) && _radiusLimits.y > 0.001f)
+            {
+                zoomFactor = Mathf.Clamp(currentRadius / _radiusLimits.y, 0.01f, 1f);
+            }
+
             // Invert input for natural "drag world" feel and scale for pixel coordinates
-            Vector3 move = (right * -direction.x + forward * -direction.y) * (_panSpeed * 0.002f * screenScale);
+            Vector3 move = (right * -direction.x + forward * -direction.y) * (_panSpeed * 0.002f * screenScale * zoomFactor);
             Vector3 finalPos = panTarget.position + move;
             finalPos.y = panTarget.position.y;
 
@@ -297,7 +309,6 @@ namespace Twinny.Mobile.Camera
             _hasPanLockAxes = false;
             if (_hardLookRestoreRoutine != null)
                 StopCoroutine(_hardLookRestoreRoutine);
-            _hardLookRestoreRoutine = StartCoroutine(RestoreHardLookAfterPanDelayed());
             if (_returnTrackingTargetToOriginOnRelease && GetTrackingTarget() != null)
                 _isReturningPan = true;
         }
@@ -315,7 +326,11 @@ namespace Twinny.Mobile.Camera
         private void SuspendHardLookWhilePanning()
         {
             if (_cinemachineCamera == null) return;
-            if (_suspendedHardLookStates.Count > 0) return;
+            if (_isHardLookSuspended) return;
+
+            _isHardLookSuspended = true;
+            _suspendedLookAtTarget = _cinemachineCamera.LookAt;
+            _cinemachineCamera.LookAt = null;
 
             var components = _cinemachineCamera.GetComponents<Component>();
             for (int i = 0; i < components.Length; i++)
@@ -340,7 +355,11 @@ namespace Twinny.Mobile.Camera
 
         private void RestoreHardLookAfterPan()
         {
-            if (_suspendedHardLookStates.Count == 0) return;
+            if (!_isHardLookSuspended) return;
+
+            if (_cinemachineCamera != null) _cinemachineCamera.LookAt = _suspendedLookAtTarget;
+            _suspendedLookAtTarget = null;
+            _isHardLookSuspended = false;
 
             for (int i = 0; i < _suspendedHardLookStates.Count; i++)
             {
@@ -379,6 +398,7 @@ namespace Twinny.Mobile.Camera
         {
             if (!IsActiveCamera()) return;
             if (_orbitalFollow == null) return;
+            RestoreHardLookAfterPan();
 
             float radius = GetRadius();
             if (float.IsNaN(radius))

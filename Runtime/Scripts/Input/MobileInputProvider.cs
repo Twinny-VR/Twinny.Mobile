@@ -47,7 +47,7 @@ namespace Twinny.Mobile.Input
         private float _lastThreeFingerDistance;
         private Vector3 _lastDeviceRotation;
         [SerializeField] private float _gyroTiltThreshold = 0.5f;
-        [SerializeField] private float _twoFingerSwipeSensitivity = 25.0f;
+        [SerializeField] private float _twoFingerSwipeSensitivity = 10.0f;
         private bool _isScreenReaderActive;
         private bool _warnedMissingSettings;
         private bool _warnedMissingRouter;
@@ -447,7 +447,9 @@ namespace Twinny.Mobile.Input
 
                     if (totalZoom > threshold || totalPan > threshold)
                     {
-                        if (totalZoom > totalPan) _isZooming = true;
+                        // Bias towards panning: Zoom must be significantly stronger than pan to take precedence
+                        // because it's hard to drag two fingers without slightly changing distance.
+                        if (totalZoom > totalPan * 1.75f) _isZooming = true;
                         else
                         {
                             _isPanning = true;

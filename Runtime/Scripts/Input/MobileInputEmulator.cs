@@ -79,6 +79,7 @@ namespace Twinny.Mobile.Input
             if (HandleThreeFinger()) return;
             if (HandleTwoFinger()) return;
             if (HandleMousePinch()) return;
+            HandleScroll();
 
             HandleSingleFinger();
         }
@@ -115,7 +116,7 @@ namespace Twinny.Mobile.Input
             {
                 _twoFingerDragging = true;
                 _suppressTap = true;
-                Vector2 direction = delta.normalized;
+                Vector2 direction = delta.normalized * 10.0f;
                 Vector2 center = current;
                 CallbackHub.CallAction<IMobileInputCallbacks>(
                     cb => cb.OnTwoFingerSwipe(direction, center)

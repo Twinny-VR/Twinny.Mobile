@@ -21,6 +21,9 @@ namespace Twinny.Mobile.Navigation
         [Header("Raycast")]
         [SerializeField] private LayerMask _interactableMask;
 
+        [Header("Visuals")]
+        [SerializeField] private GameObject _targetDecalPrefab;
+
         /// <summary>
         /// Fired when a valid NavMesh destination is chosen.
         /// </summary>
@@ -146,6 +149,12 @@ namespace Twinny.Mobile.Navigation
             );
             if (_agent.isStopped) _agent.isStopped = false;
             _agent.SetDestination(navHit.position);
+
+            if (_targetDecalPrefab != null)
+            {
+                Instantiate(_targetDecalPrefab, navHit.position, Quaternion.identity);
+            }
+
             OnNavMeshClick?.Invoke(navHit.position);
             return true;
         }

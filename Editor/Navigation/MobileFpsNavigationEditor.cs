@@ -65,6 +65,7 @@ namespace Twinny.Mobile.Editor.Navigation
             AddProperty(container, serializedObject.FindProperty("_navMeshAreaMask"), serializedObject);
             AddProperty(container, serializedObject.FindProperty("_raycastCamera"), serializedObject);
             AddProperty(container, serializedObject.FindProperty("_interactableMask"), serializedObject);
+            AddProperty(container, serializedObject.FindProperty("_targetDecalPrefab"), serializedObject);
         }
 
         private void AddRuntimeFields(VisualElement container)
