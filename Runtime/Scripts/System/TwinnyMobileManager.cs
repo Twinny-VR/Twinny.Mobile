@@ -39,6 +39,10 @@ namespace Twinny.Mobile
 
         public async void OnImmersiveRequested()
         {
+#if UNITY_WEBGL && !UNITY_EDITOR
+            if (!WebGLGyroAPI.IsInitialized)
+                WebGLGyroAPI.RequestGyroPermission();
+#endif
             await CanvasTransition.FadeScreenAsync(true,1f,renderMode:RenderMode.ScreenSpaceOverlay);
             StateMachine.ChangeState(new MobileImmersiveState(this));
             await CanvasTransition.FadeScreenAsync(false,1f,renderMode:RenderMode.ScreenSpaceOverlay);

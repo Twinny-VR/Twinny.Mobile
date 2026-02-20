@@ -35,6 +35,7 @@ namespace Twinny.Mobile.Navigation
         public event Action<Transform> OnInteractableClick;
 
         private bool _isModeActive;
+        private GameObject _currentDecal;
 
         private void OnEnable()
         {
@@ -53,6 +54,18 @@ namespace Twinny.Mobile.Navigation
         {
             EnsureReferences();
             if (_maxSampleDistance < 0f) _maxSampleDistance = 0f;
+        }
+
+        private void Update()
+        {
+            if (_currentDecal != null && _agent != null && !_agent.pathPending)
+            {
+                if (_agent.remainingDistance <= _agent.stoppingDistance)
+                {
+                    Destroy(_currentDecal);
+                    _currentDecal = null;
+                }
+            }
         }
 
         public void OnSelectHit(RaycastHit hit)
@@ -150,9 +163,10 @@ namespace Twinny.Mobile.Navigation
             if (_agent.isStopped) _agent.isStopped = false;
             _agent.SetDestination(navHit.position);
 
+            if (_currentDecal != null) Destroy(_currentDecal);
             if (_targetDecalPrefab != null)
             {
-                Instantiate(_targetDecalPrefab, navHit.position, Quaternion.identity);
+                _currentDecal = Instantiate(_targetDecalPrefab, navHit.position, _targetDecalPrefab.transform.rotation);
             }
 
             OnNavMeshClick?.Invoke(navHit.position);

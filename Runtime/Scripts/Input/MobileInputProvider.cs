@@ -135,9 +135,15 @@ namespace Twinny.Mobile.Input
             {
                 get
                 {
+#if UNITY_WEBGL && !UNITY_EDITOR
+                    if (Instance != null && WebGLGyroAPI.IsInitialized)
+                        return WebGLGyroAPI.GetRotation().eulerAngles;
+                    return null;
+#else
                     if (Instance != null && Instance.CanUseGyroscope() && UnityInput.gyro.enabled)
                         return UnityInput.gyro.attitude.eulerAngles;
                     return null;
+#endif
                 }
             }
         }
@@ -167,8 +173,12 @@ namespace Twinny.Mobile.Input
             _lastOrientation = CanUseDeviceOrientation() ? UnityInput.deviceOrientation : DeviceOrientation.Unknown;
             if (CanUseGyroscope())
             {
+#if UNITY_WEBGL && !UNITY_EDITOR
+                _lastDeviceRotation = Vector3.zero;
+#else
                 UnityInput.gyro.enabled = true;
                 _lastDeviceRotation = UnityInput.gyro.attitude.eulerAngles;
+#endif
             }
 
             _lastAcceleration = UnityInput.acceleration;
@@ -647,16 +657,42 @@ namespace Twinny.Mobile.Input
             // Detect tilt using gyroscope
             if (CanUseGyroscope())
             {
+#if UNITY_WEBGL && !UNITY_EDITOR
+                if (WebGLGyroAPI.IsInitialized)
+                {
+                    Quaternion currentRot = WebGLGyroAPI.GetRotation();
+                    Quaternion lastRot = Quaternion.Euler(_lastDeviceRotation);
+                    Quaternion deltaRot = Quaternion.Inverse(lastRot) * currentRot;
+
+                    Vector3 deltaEuler = deltaRot.eulerAngles;
+                    if (deltaEuler.x > 180) deltaEuler.x -= 360;
+                    if (deltaEuler.y > 180) deltaEuler.y -= 360;
+                    if (deltaEuler.z > 180) deltaEuler.z -= 360;
+
+                    float dt = Time.deltaTime > 0.0001f ? Time.deltaTime : 0.0001f;
+                    Vector3 rate = deltaEuler / dt;
+
+                    if (rate.sqrMagnitude > _gyroTiltThreshold * _gyroTiltThreshold)
+                    {
+                        CallbackHub.CallAction<IMobileInputCallbacks>(
+                            cb => cb.OnTilt(rate)
+                        );
+                        MobileInputEvents.Tilt(rate);
+                    }
+                    _lastDeviceRotation = currentRot.eulerAngles;
+                }
+#else
                 Vector3 rate = UnityInput.gyro.rotationRateUnbiased * Mathf.Rad2Deg;
                 if (rate.sqrMagnitude > _gyroTiltThreshold * _gyroTiltThreshold)
                 {
                     CallbackHub.CallAction<IMobileInputCallbacks>(
                         cb => cb.OnTilt(rate)
                     );
-                    MobileInputEvents.Tap(rate);
+                    MobileInputEvents.Tilt(rate);
                 }
 
                 _lastDeviceRotation = UnityInput.gyro.attitude.eulerAngles;
+#endif
             }
 
             // Detect orientation change
@@ -959,7 +995,7 @@ namespace Twinny.Mobile.Input
         private bool CanUseGyroscope()
         {
 #if UNITY_WEBGL && !UNITY_EDITOR
-            return false;
+            return true;
 #else
             return SystemInfo.supportsGyroscope;
 #endif
