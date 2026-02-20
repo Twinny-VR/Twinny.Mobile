@@ -1,4 +1,6 @@
 using System.Reflection;
+using System.Collections.Generic;
+using System.Collections;
 using Concept.Core;
 using Twinny.Core.Input;
 using UnityEngine;
@@ -33,10 +35,12 @@ namespace Twinny.Mobile.Camera
         [Header("Tuning")]
         [SerializeField] private float _rotateSpeed = 0.1f;
         [SerializeField] private float _tiltSpeed = 0.1f;
-        [SerializeField] private bool _returnPanToOriginOnRelease = true;
+        [SerializeField] private bool _returnTrackingTargetToOriginOnRelease = false;
         [SerializeField] private float _panSpeed = 6f;
         [SerializeField] private float _panReturnSpeed = 3f;
         [SerializeField] private float _zoomSpeed = 3f;
+        [SerializeField] private bool _lockRotationWhileTwoFingerPan = true;
+        [SerializeField] private float _hardLookRestoreDelay = 0.08f;
         [SerializeField] private bool _enablePanLimit;
         [SerializeField] private float _maxPanDistance = 10f;
         [SerializeField] private Vector2 _verticalAxisLimits = new Vector2(-80f, 80f);
@@ -54,10 +58,23 @@ namespace Twinny.Mobile.Camera
         private bool _isModeActive = true;
         private Vector3 _initialPanTargetPosition;
         private bool _hasInitialPosition;
+        private Vector3 _lastValidPanForward = Vector3.forward;
+        private float _panLockHorizontalAxis;
+        private float _panLockVerticalAxis;
+        private bool _hasPanLockAxes;
+        private readonly List<SuspendedHardLookState> _suspendedHardLookStates = new List<SuspendedHardLookState>();
+        private Coroutine _hardLookRestoreRoutine;
+
+        private struct SuspendedHardLookState
+        {
+            public Behaviour behaviour;
+            public bool wasEnabled;
+        }
 
         private void Update()
         {
             if (!IsActiveCamera()) return;
+            EnforceRotationLockWhilePanning();
             UpdatePanReturn();
         }
 
@@ -73,6 +90,12 @@ namespace Twinny.Mobile.Camera
 
         private void OnDisable()
         {
+            if (_hardLookRestoreRoutine != null)
+            {
+                StopCoroutine(_hardLookRestoreRoutine);
+                _hardLookRestoreRoutine = null;
+            }
+            RestoreHardLookAfterPan();
             CallbackHub.UnregisterCallback<IMobileInputCallbacks>(this);
             CallbackHub.UnregisterCallback<ITwinnyMobileCallbacks>(this);
         }
@@ -159,6 +182,7 @@ namespace Twinny.Mobile.Camera
         {
             if (!IsActiveCamera()) return;
             if (_orbitalFollow == null) return;
+            if (_lockRotationWhileTwoFingerPan && _isPanning) return;
 
             var horizontal = _orbitalFollow.HorizontalAxis;
             horizontal.Value += dx * _rotateSpeed;
@@ -173,14 +197,12 @@ namespace Twinny.Mobile.Camera
         private void ApplyPan(Vector2 direction)
         {
             if (!IsActiveCamera()) return;
-            Transform reference = GetPanReference();
-            if (reference == null) return;
 
-            Transform panTarget = GetPanTarget();
+            Transform panTarget = GetTrackingTarget();
             if (panTarget == null) return;
 
-            Vector3 right = reference.right;
-            Vector3 up = reference.up;
+            if (!TryGetStablePanAxes(out Vector3 right, out Vector3 forward))
+                return;
             
             // Initialize limit origin if not set yet
             if (_enablePanLimit && !_hasInitialPosition)
@@ -193,16 +215,62 @@ namespace Twinny.Mobile.Camera
             float screenScale = 1080f / Mathf.Max(Screen.height, 1);
 
             // Invert input for natural "drag world" feel and scale for pixel coordinates
-            Vector3 move = (right * direction.x + up * direction.y) * (_panSpeed * 0.002f * screenScale);
+            Vector3 move = (right * -direction.x + forward * -direction.y) * (_panSpeed * 0.002f * screenScale);
             Vector3 finalPos = panTarget.position + move;
+            finalPos.y = panTarget.position.y;
 
             if (_enablePanLimit)
             {
                 Vector3 offset = finalPos - _initialPanTargetPosition;
                 finalPos = _initialPanTargetPosition + Vector3.ClampMagnitude(offset, _maxPanDistance);
+                finalPos.y = panTarget.position.y;
             }
 
             panTarget.position = finalPos;
+        }
+
+        private bool TryGetStablePanAxes(out Vector3 right, out Vector3 forward)
+        {
+            right = Vector3.right;
+            forward = Vector3.forward;
+
+            // Prefer orbital yaw: it's stable even when camera tilt approaches 90 degrees.
+            if (_orbitalFollow != null)
+            {
+                float yaw = _orbitalFollow.HorizontalAxis.Value;
+                Quaternion yawRot = Quaternion.Euler(0f, yaw, 0f);
+                forward = yawRot * Vector3.forward;
+                right = yawRot * Vector3.right;
+                _lastValidPanForward = forward;
+                return true;
+            }
+
+            Transform reference = GetPanReference();
+            if (reference == null) return false;
+
+            Vector3 flatForward = Vector3.ProjectOnPlane(reference.forward, Vector3.up);
+            if (flatForward.sqrMagnitude > 0.0001f)
+            {
+                forward = flatForward.normalized;
+                _lastValidPanForward = forward;
+            }
+            else if (_lastValidPanForward.sqrMagnitude > 0.0001f)
+            {
+                forward = _lastValidPanForward.normalized;
+            }
+            else
+            {
+                forward = Vector3.forward;
+            }
+
+            right = Vector3.Cross(Vector3.up, forward).normalized;
+            if (right.sqrMagnitude <= 0.0001f)
+            {
+                right = Vector3.right;
+                forward = Vector3.forward;
+            }
+
+            return true;
         }
 
         private void BeginPanIfNeeded()
@@ -213,18 +281,98 @@ namespace Twinny.Mobile.Camera
 
             if (_isPanning) return;
             _isPanning = true;
-            Transform panTarget = GetPanTarget();
+            Transform panTarget = GetTrackingTarget();
             // Só redefine a origem se não estivesse no meio de um retorno (evita drift da origem)
             if (panTarget != null && !wasReturning)
                 _panOriginPosition = panTarget.position;
+
+            CachePanLockAxes();
+            SuspendHardLookWhilePanning();
         }
 
         private void EndPan()
         {
             if (!_isPanning) return;
             _isPanning = false;
-            if (_returnPanToOriginOnRelease && GetPanTarget() != null)
+            _hasPanLockAxes = false;
+            if (_hardLookRestoreRoutine != null)
+                StopCoroutine(_hardLookRestoreRoutine);
+            _hardLookRestoreRoutine = StartCoroutine(RestoreHardLookAfterPanDelayed());
+            if (_returnTrackingTargetToOriginOnRelease && GetTrackingTarget() != null)
                 _isReturningPan = true;
+        }
+
+        private IEnumerator RestoreHardLookAfterPanDelayed()
+        {
+            float delay = Mathf.Max(0f, _hardLookRestoreDelay);
+            if (delay > 0f)
+                yield return new WaitForSeconds(delay);
+
+            RestoreHardLookAfterPan();
+            _hardLookRestoreRoutine = null;
+        }
+
+        private void SuspendHardLookWhilePanning()
+        {
+            if (_cinemachineCamera == null) return;
+            if (_suspendedHardLookStates.Count > 0) return;
+
+            var components = _cinemachineCamera.GetComponents<Component>();
+            for (int i = 0; i < components.Length; i++)
+            {
+                Component component = components[i];
+                if (component == null) continue;
+
+                // Avoid hard dependency on a specific Cinemachine version/type name.
+                if (!component.GetType().Name.Contains("HardLookAt")) continue;
+                if (component is not Behaviour behaviour) continue;
+
+                SuspendedHardLookState state = new SuspendedHardLookState
+                {
+                    behaviour = behaviour,
+                    wasEnabled = behaviour.enabled
+                };
+
+                _suspendedHardLookStates.Add(state);
+                behaviour.enabled = false;
+            }
+        }
+
+        private void RestoreHardLookAfterPan()
+        {
+            if (_suspendedHardLookStates.Count == 0) return;
+
+            for (int i = 0; i < _suspendedHardLookStates.Count; i++)
+            {
+                SuspendedHardLookState state = _suspendedHardLookStates[i];
+                Behaviour behaviour = state.behaviour;
+                if (behaviour == null) continue;
+                behaviour.enabled = state.wasEnabled;
+            }
+
+            _suspendedHardLookStates.Clear();
+        }
+
+        private void CachePanLockAxes()
+        {
+            if (_orbitalFollow == null) return;
+            _panLockHorizontalAxis = _orbitalFollow.HorizontalAxis.Value;
+            _panLockVerticalAxis = _orbitalFollow.VerticalAxis.Value;
+            _hasPanLockAxes = true;
+        }
+
+        private void EnforceRotationLockWhilePanning()
+        {
+            if (!_lockRotationWhileTwoFingerPan || !_isPanning) return;
+            if (_orbitalFollow == null || !_hasPanLockAxes) return;
+
+            var horizontal = _orbitalFollow.HorizontalAxis;
+            horizontal.Value = _panLockHorizontalAxis;
+            _orbitalFollow.HorizontalAxis = horizontal;
+
+            var vertical = _orbitalFollow.VerticalAxis;
+            vertical.Value = _panLockVerticalAxis;
+            _orbitalFollow.VerticalAxis = vertical;
         }
 
         private void ApplyZoom(float delta)
@@ -328,7 +476,7 @@ namespace Twinny.Mobile.Camera
         private void UpdatePanReturn()
         {
             if (!IsActiveCamera()) return;
-            Transform panTarget = GetPanTarget();
+            Transform panTarget = GetTrackingTarget();
             if (!_isReturningPan || panTarget == null) return;
 
             panTarget.position = Vector3.SmoothDamp(
@@ -366,12 +514,18 @@ namespace Twinny.Mobile.Camera
 
         private void InitializePanLimit()
         {
-            Transform target = GetPanTarget();
+            Transform target = GetTrackingTarget();
             if (target != null && !_hasInitialPosition)
             {
                 _initialPanTargetPosition = target.position;
                 _hasInitialPosition = true;
             }
+        }
+
+        private Transform GetTrackingTarget()
+        {
+            EnsureReferences();
+            return _cinemachineCamera != null ? _cinemachineCamera.Follow : null;
         }
 
         private bool IsActiveCamera()

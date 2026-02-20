@@ -219,8 +219,10 @@ namespace Twinny.Mobile.Camera
             if (_cinemachineCamera == null) return;
             if (!_hasDefaultFov) CacheDefaultFov();
 
+            // Keep sight zoom while pinch fingers are still on screen.
+            bool isHoldingPinchTouch = Twinny.Mobile.Input.MobileInputProvider.CurrentData.TouchCount >= 2;
             bool zoomActive = _zoomRequested &&
-                (Time.unscaledTime - _lastZoomInputTime) <= _zoomReleaseDelay;
+                ((Time.unscaledTime - _lastZoomInputTime) <= _zoomReleaseDelay || isHoldingPinchTouch);
 
 #if UNITY_EDITOR
             if (UnityEngine.Input.GetMouseButton(2))

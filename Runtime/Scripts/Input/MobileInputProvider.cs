@@ -33,6 +33,7 @@ namespace Twinny.Mobile.Input
         private bool _isPanning;
         private float _startPinchDist;
         private Vector2 _startPanCenter;
+        private Vector2 _lastPanCenter;
 
         // New state variables for missing features
         private Dictionary<int, TouchHistory> _touchHistories = new Dictionary<int, TouchHistory>();
@@ -46,6 +47,7 @@ namespace Twinny.Mobile.Input
         private float _lastThreeFingerDistance;
         private Vector3 _lastDeviceRotation;
         [SerializeField] private float _gyroTiltThreshold = 0.5f;
+        [SerializeField] private float _twoFingerSwipeSensitivity = 25.0f;
         private bool _isScreenReaderActive;
         private bool _warnedMissingSettings;
         private bool _warnedMissingRouter;
@@ -82,12 +84,17 @@ namespace Twinny.Mobile.Input
             public static int TouchCount => UnityInput.touchCount;
             public static Touch[] Touches => UnityInput.touches;
             public static Vector3 Acceleration => UnityInput.acceleration;
-            public static DeviceOrientation Orientation =>
+            public static DeviceOrientation Orientation
+            {
+                get
+                {
 #if UNITY_WEBGL && !UNITY_EDITOR
-                DeviceOrientation.Unknown;
+                    return DeviceOrientation.Unknown;
 #else
-                UnityInput.deviceOrientation;
+                    return UnityInput.deviceOrientation;
 #endif
+                }
+            }
             public static bool IsDragging => Instance?._isDragging ?? false;
             public static bool IsDevicePickedUp => Instance?._isDevicePickedUp ?? false;
             public static bool IsScreenReaderActive => Instance?._isScreenReaderActive ?? false;
@@ -421,6 +428,7 @@ namespace Twinny.Mobile.Input
                 _isPanning = false;
                 _startPinchDist = currentDist;
                 _startPanCenter = (t0.position + t1.position) / 2;
+                _lastPanCenter = _startPanCenter;
             }
 
             // Two-finger pinch (zoom)
@@ -428,6 +436,7 @@ namespace Twinny.Mobile.Input
             {
                 Vector2 avgDelta = (t0.deltaPosition + t1.deltaPosition) / 2;
                 Vector2 centerPos = (t0.position + t1.position) / 2;
+                Vector2 centerDelta = centerPos - _lastPanCenter;
 
                 // Lock gesture type on start
                 if (!_isZooming && !_isPanning)
@@ -439,7 +448,11 @@ namespace Twinny.Mobile.Input
                     if (totalZoom > threshold || totalPan > threshold)
                     {
                         if (totalZoom > totalPan) _isZooming = true;
-                        else _isPanning = true;
+                        else
+                        {
+                            _isPanning = true;
+                            _lastPanCenter = centerPos;
+                        }
                         _lastPinchDist = currentDist; // Sync to avoid jump
                     }
                     else
@@ -460,14 +473,22 @@ namespace Twinny.Mobile.Input
                     MobileInputEvents.PinchZoom(pinchDelta);
                 }
                 // Pan (Two Finger Swipe)
-                else if (_isPanning && avgDelta.sqrMagnitude > 1.0f)
+                else if (_isPanning)
                 {
-                    Vector2 direction = avgDelta.normalized;
-                    CallbackHub.CallAction<IMobileInputCallbacks>(
-                        cb => cb.OnTwoFingerSwipe(direction, centerPos)
-                    );
-                    MobileInputEvents.Drag(direction, centerPos);
+                    if (centerDelta.sqrMagnitude <= 0.0001f && avgDelta.sqrMagnitude > 0.0001f)
+                        centerDelta = avgDelta;
+
+                    if (centerDelta.sqrMagnitude > 1.0f)
+                    {
+                        Vector2 panDelta = centerDelta * Mathf.Max(0.01f, _twoFingerSwipeSensitivity);
+                        CallbackHub.CallAction<IMobileInputCallbacks>(
+                            cb => cb.OnTwoFingerSwipe(panDelta, centerPos)
+                        );
+                        MobileInputEvents.Drag(panDelta, centerPos);
+                    }
                 }
+
+                _lastPanCenter = centerPos;
 
                 // Two-finger long press detection
                 if (!_twoFingerLongPressDetected &&

@@ -33,12 +33,15 @@ namespace Twinny.Mobile.Editor.Camera
             public string customPanTargetId;
             public float rotateSpeed;
             public float tiltSpeed;
+            public int activePriority;
+            public int inactivePriority;
             public float panSpeed;
             public float panReturnSpeed;
             public float zoomSpeed;
+            public float hardLookRestoreDelay;
             public bool enablePanLimit;
             public float maxPanDistance;
-            public bool returnPanToOrigin;
+            public bool returnTrackingTargetToOriginOnRelease;
             public int panTargetMode;
             public Vector2 verticalAxisLimits;
             public Vector2 radiusLimits;
@@ -89,11 +92,14 @@ namespace Twinny.Mobile.Editor.Camera
 
             AddSlider(container, "_rotateSpeed", 0f, 2f, "Rotate Speed");
             AddSlider(container, "_tiltSpeed", 0f, 2f, "Tilt Speed");
+            AddProperty(container, serializedObject.FindProperty("_activePriority"), serializedObject);
+            AddProperty(container, serializedObject.FindProperty("_inactivePriority"), serializedObject);
             AddSlider(container, "_panSpeed", 0f, 10f, "Pan Speed");
             AddSlider(container, "_panReturnSpeed", 0f, 20f, "Pan Return Speed");
             AddSlider(container, "_zoomSpeed", 0f, 10f, "Zoom Speed");
+            AddSlider(container, "_hardLookRestoreDelay", 0f, 0.5f, "HardLook Restore Delay");
 
-            AddProperty(container, serializedObject.FindProperty("_returnPanToOriginOnRelease"), serializedObject);
+            AddProperty(container, serializedObject.FindProperty("_returnTrackingTargetToOriginOnRelease"), serializedObject);
             AddProperty(container, serializedObject.FindProperty("_enablePanLimit"), serializedObject);
             AddSlider(container, "_maxPanDistance", 0f, 50f, "Max Pan Dist");
             AddProperty(container, serializedObject.FindProperty("_panTargetMode"), serializedObject);
@@ -465,12 +471,15 @@ namespace Twinny.Mobile.Editor.Camera
                 customPanTargetId = GetId(GetCustomPanTarget(handler)),
                 rotateSpeed = GetFloat(handler, "_rotateSpeed"),
                 tiltSpeed = GetFloat(handler, "_tiltSpeed"),
+                activePriority = GetInt(handler, "_activePriority"),
+                inactivePriority = GetInt(handler, "_inactivePriority"),
                 panSpeed = GetFloat(handler, "_panSpeed"),
                 panReturnSpeed = GetFloat(handler, "_panReturnSpeed"),
                 zoomSpeed = GetFloat(handler, "_zoomSpeed"),
+                hardLookRestoreDelay = GetFloat(handler, "_hardLookRestoreDelay"),
                 enablePanLimit = GetBool(handler, "_enablePanLimit"),
                 maxPanDistance = GetFloat(handler, "_maxPanDistance"),
-                returnPanToOrigin = GetBool(handler, "_returnPanToOriginOnRelease"),
+                returnTrackingTargetToOriginOnRelease = GetBool(handler, "_returnTrackingTargetToOriginOnRelease"),
                 panTargetMode = GetInt(handler, "_panTargetMode"),
                 verticalAxisLimits = GetVector2(handler, "_verticalAxisLimits"),
                 radiusLimits = GetVector2(handler, "_radiusLimits"),
@@ -545,12 +554,15 @@ namespace Twinny.Mobile.Editor.Camera
             var handlerSo = new SerializedObject(handler);
             SetFloat(handlerSo, "_rotateSpeed", payload.rotateSpeed);
             SetFloat(handlerSo, "_tiltSpeed", payload.tiltSpeed);
+            SetInt(handlerSo, "_activePriority", payload.activePriority);
+            SetInt(handlerSo, "_inactivePriority", payload.inactivePriority);
             SetFloat(handlerSo, "_panSpeed", payload.panSpeed);
             SetFloat(handlerSo, "_panReturnSpeed", payload.panReturnSpeed);
             SetFloat(handlerSo, "_zoomSpeed", payload.zoomSpeed);
+            SetFloat(handlerSo, "_hardLookRestoreDelay", payload.hardLookRestoreDelay);
             SetBool(handlerSo, "_enablePanLimit", payload.enablePanLimit);
             SetFloat(handlerSo, "_maxPanDistance", payload.maxPanDistance);
-            SetBool(handlerSo, "_returnPanToOriginOnRelease", payload.returnPanToOrigin);
+            SetBool(handlerSo, "_returnTrackingTargetToOriginOnRelease", payload.returnTrackingTargetToOriginOnRelease);
             SetInt(handlerSo, "_panTargetMode", payload.panTargetMode);
             SetVector2(handlerSo, "_verticalAxisLimits", payload.verticalAxisLimits);
             SetVector2(handlerSo, "_radiusLimits", payload.radiusLimits);
