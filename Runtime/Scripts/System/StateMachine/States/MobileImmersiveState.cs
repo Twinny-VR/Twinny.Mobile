@@ -20,7 +20,9 @@ namespace Twinny.Mobile
             SkyboxHandler.SwitchSkybox(1);
         }
 
-        public void Exit() { }
+        public void Exit() {
+            CallbackHub.CallAction<ITwinnyMobileCallbacks>(callback => callback.OnExitImmersiveMode());
+        }
 
         public void Update() { }
     }

@@ -20,7 +20,9 @@ namespace Twinny.Mobile
             CallbackHub.CallAction<ITwinnyMobileCallbacks>(callback => callback.OnEnterMockupMode());
         }
 
-        public void Exit() { }
+        public void Exit() {
+            CallbackHub.CallAction<ITwinnyMobileCallbacks>(callback => callback.OnExitMockupMode());
+        }
 
         public void Update() { }
     }

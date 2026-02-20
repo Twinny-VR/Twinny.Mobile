@@ -38,10 +38,12 @@ namespace Twinny.Mobile
         /// Called when the immersive mode becomes active.
         /// </summary>
         void OnEnterImmersiveMode();
+        void OnExitImmersiveMode();
 
         /// <summary>
         /// Called when the mockup mode becomes active.
         /// </summary>
         void OnEnterMockupMode();
+        void OnExitMockupMode();
     }
 }

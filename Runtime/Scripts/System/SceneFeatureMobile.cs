@@ -118,11 +118,13 @@ namespace Twinny.Mobile
         {
             throw new System.NotImplementedException();
         }
+        public void OnExitImmersiveMode() { }
 
         public void OnEnterMockupMode()
         {
             throw new System.NotImplementedException();
         }
+        public void OnExitMockupMode() { }
 
         public void OnTeleportToLandMark(int landMarkIndex)
         {

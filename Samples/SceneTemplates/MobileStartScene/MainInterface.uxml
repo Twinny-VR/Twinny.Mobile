@@ -4,6 +4,9 @@
         <ui:Button text="Iniciar" name="StartButton" class="start-button"/>
     </ui:VisualElement>
     <ui:VisualElement name="ExperienceUI" class="experience-ui" picking-mode="Ignore">
+        <ui:VisualElement name="SideBar" class="side-bar" picking-mode="Ignore" style="position: absolute; right: 0; top: 20%; bottom: 20%; justify-content: center;">
+            <ui:Slider name="CutoffSlider" direction="Vertical" low-value="0" high-value="1" value="0" class="cutoff-slider"/>
+        </ui:VisualElement>
         <ui:VisualElement name="BottomBar" class="bottom-bar" picking-mode="Ignore">
             <ui:Button text="Gyro On" name="GyroToggleButton" class="gyro-toggle-button"/>
             <ui:Button text="" name="ImmersiveButton" class="icon-button immersive-button"/>

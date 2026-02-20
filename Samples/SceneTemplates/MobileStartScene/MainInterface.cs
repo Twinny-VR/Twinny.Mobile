@@ -16,6 +16,7 @@ namespace Twinny.Mobile.Samples
         private const string ExperienceUiName = "ExperienceUI";
         private const string LoadingOverlayName = "LoadingOverlay";
         private const string LoadingBarFillName = "LoadingBarFill";
+        private const string CutoffSliderName = "CutoffSlider";
 
         [SerializeField] private UIDocument _document;
         private Button _startButton;
@@ -26,6 +27,7 @@ namespace Twinny.Mobile.Samples
         private VisualElement _experienceUi;
         private VisualElement _loadingOverlay;
         private VisualElement _loadingBarFill;
+        private Slider _cutoffSlider;
         private bool _warnedMissingRoot;
         private bool _warnedMissingStart;
         private bool _warnedMissingImmersive;
@@ -35,6 +37,7 @@ namespace Twinny.Mobile.Samples
         private bool _warnedMissingExperienceUi;
         private bool _warnedMissingLoadingOverlay;
         private bool _warnedMissingLoadingBar;
+        private bool _warnedMissingCutoffSlider;
         private bool _gyroEnabled = true;
 
         private void OnEnable()
@@ -76,6 +79,7 @@ namespace Twinny.Mobile.Samples
             _experienceUi = root.Q<VisualElement>(ExperienceUiName);
             _loadingOverlay = root.Q<VisualElement>(LoadingOverlayName);
             _loadingBarFill = root.Q<VisualElement>(LoadingBarFillName);
+            _cutoffSlider = root.Q<Slider>(CutoffSliderName);
 
             if (_startButton == null) WarnMissingStart();
             if (_immersiveButton == null) WarnMissingImmersive();
@@ -85,6 +89,7 @@ namespace Twinny.Mobile.Samples
             if (_experienceUi == null) WarnMissingExperienceUi();
             if (_loadingOverlay == null) WarnMissingLoadingOverlay();
             if (_loadingBarFill == null) WarnMissingLoadingBar();
+            if (_cutoffSlider == null) WarnMissingCutoffSlider();
         }
 
         private void RegisterCallbacks()
@@ -100,6 +105,9 @@ namespace Twinny.Mobile.Samples
 
             if (_gyroToggleButton != null)
                 _gyroToggleButton.clicked += HandleGyroToggleClicked;
+
+            if (_cutoffSlider != null)
+                _cutoffSlider.RegisterValueChangedCallback(HandleCutoffChanged);
         }
 
         private void UnregisterCallbacks()
@@ -115,6 +123,9 @@ namespace Twinny.Mobile.Samples
 
             if (_gyroToggleButton != null)
                 _gyroToggleButton.clicked -= HandleGyroToggleClicked;
+
+            if (_cutoffSlider != null)
+                _cutoffSlider.UnregisterValueChangedCallback(HandleCutoffChanged);
         }
 
         private void HandleStartClicked()
@@ -139,6 +150,11 @@ namespace Twinny.Mobile.Samples
             CallbackHub.CallAction<IMobileUICallbacks>(callback => callback.OnGyroscopeToggled(_gyroEnabled));
         }
 
+        private void HandleCutoffChanged(ChangeEvent<float> evt)
+        {
+            Shader.SetGlobalFloat("_CutoffHeight", evt.newValue);
+        }
+
         public void OnImmersiveRequested()
         {
             SetModeButtons(isMockup: false);
@@ -151,14 +167,18 @@ namespace Twinny.Mobile.Samples
 
         public void OnStartExperienceRequested() { }
 
-        public void OnEnterImmersiveMode()
-        {
-            SetModeButtons(isMockup: false);
-        }
+        public void OnEnterImmersiveMode(){ }
+        public void OnExitImmersiveMode(){ }
 
         public void OnEnterMockupMode()
         {
             SetModeButtons(isMockup: true);
+            if (_cutoffSlider != null)
+                _cutoffSlider.SetValueWithoutNotify(Shader.GetGlobalFloat("_CutoffHeight"));
+        }
+        public void OnExitMockupMode()
+        {
+            SetModeButtons(isMockup: false);
         }
 
         public void OnExperienceLoaded()
@@ -264,6 +284,13 @@ namespace Twinny.Mobile.Samples
             Debug.LogWarning("[MainInterface] LoadingBarFill not found in UXML.");
         }
 
+        private void WarnMissingCutoffSlider()
+        {
+            if (_warnedMissingCutoffSlider) return;
+            _warnedMissingCutoffSlider = true;
+            Debug.LogWarning("[MainInterface] CutoffSlider not found in UXML.");
+        }
+
         private void SetModeButtons(bool isMockup)
         {
             if (_immersiveButton != null)
@@ -274,6 +301,9 @@ namespace Twinny.Mobile.Samples
 
             if (_gyroToggleButton != null)
                 _gyroToggleButton.style.display = isMockup ? DisplayStyle.None : DisplayStyle.Flex;
+
+            if (_cutoffSlider != null)
+                _cutoffSlider.style.display = isMockup ? DisplayStyle.Flex : DisplayStyle.None;
         }
 
         private void UpdateGyroToggleLabel()

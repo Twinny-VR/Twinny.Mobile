@@ -177,8 +177,10 @@ namespace Twinny.Mobile.Camera
         public void OnTeleportToLandMark(int landMarkIndex) { }
         public void OnSkyboxHDRIChanged(Material material) { }
 
-        public void OnEnterImmersiveMode() => ApplyMode(false);
+        public void OnEnterImmersiveMode() {}
+        public void OnExitImmersiveMode() {}
         public void OnEnterMockupMode() => ApplyMode(true);
+        public void OnExitMockupMode() => ApplyMode(false);
 
         private void ApplyRotation(float dx, float dy)
         {

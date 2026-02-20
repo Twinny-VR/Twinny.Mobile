@@ -138,7 +138,9 @@ namespace Twinny.Mobile.Navigation
         public void OnSkyboxHDRIChanged(Material material) { }
 
         public void OnEnterImmersiveMode() => _isModeActive = true;
-        public void OnEnterMockupMode() => _isModeActive = false;
+        public void OnExitImmersiveMode() => _isModeActive = false;
+        public void OnEnterMockupMode() { }
+        public void OnExitMockupMode() { }
 
         private bool IsInteractable(Transform target)
         {

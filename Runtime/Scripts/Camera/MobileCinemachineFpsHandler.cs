@@ -118,7 +118,9 @@ namespace Twinny.Mobile.Camera
         public void OnSkyboxHDRIChanged(Material material) { }
 
         public void OnEnterImmersiveMode() => ApplyMode(true);
-        public void OnEnterMockupMode() => ApplyMode(false);
+        public void OnExitImmersiveMode() => ApplyMode(false);
+        public void OnEnterMockupMode() { }
+        public void OnExitMockupMode() { }
 
         public void OnImmersiveRequested() { }
         public void OnMockupRequested() { }

@@ -118,3 +118,87 @@
     background-image: url("project://database/Packages/com.twinny.mobile/Samples/SceneTemplates/MobileStartScene/Sprites/Ion_Building.png?fileID=21300000&guid=b969cc91f097f8748ac779b1e60ecc9f&type=3#Ion_Building");
     display: none;
 }
+
+.cutoff-slider {
+    width: 40px;
+    min-height: 220px;
+    padding-top: 10px;
+    padding-right: 10px;
+    padding-bottom: 10px;
+    padding-left: 10px;
+    background-color: rgb(26, 26, 26);
+    border-left-color: rgb(132, 238, 0);
+    border-right-color: rgb(132, 238, 0);
+    border-top-color: rgb(132, 238, 0);
+    border-bottom-color: rgb(132, 238, 0);
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-top-left-radius: 8px;
+    border-top-right-radius: 8px;
+    border-bottom-left-radius: 8px;
+    border-bottom-right-radius: 8px;
+}
+
+.cutoff-slider .unity-base-field__input {
+    background-color: rgba(0, 0, 0, 0);
+}
+
+.cutoff-slider .unity-base-slider__track,
+.cutoff-slider #unity-track {
+    width: 6px;
+    background-color: rgb(12, 12, 12);
+    border-left-color: rgb(132, 238, 0);
+    border-right-color: rgb(132, 238, 0);
+    border-top-color: rgb(132, 238, 0);
+    border-bottom-color: rgb(132, 238, 0);
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-top-left-radius: 3px;
+    border-top-right-radius: 3px;
+    border-bottom-left-radius: 3px;
+    border-bottom-right-radius: 3px;
+    align-self: center;
+}
+
+.cutoff-slider .unity-drag-container,
+.cutoff-slider #unity-drag-container {
+    align-items: center;
+}
+
+.cutoff-slider .unity-base-slider__dragger,
+.cutoff-slider #unity-dragger {
+    width: 20px;
+    height: 20px;
+    background-color: rgb(132, 238, 0);
+    border-left-color: rgb(12, 12, 12);
+    border-right-color: rgb(12, 12, 12);
+    border-top-color: rgb(12, 12, 12);
+    border-bottom-color: rgb(12, 12, 12);
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-top-left-radius: 10px;
+    border-top-right-radius: 10px;
+    border-bottom-left-radius: 10px;
+    border-bottom-right-radius: 10px;
+    margin-left: -10px;
+    align-self: center;
+}
+
+.cutoff-slider .unity-base-slider__dragger-border,
+.cutoff-slider #unity-dragger-border {
+    width: 20px;
+    height: 20px;
+    background-color: rgba(0, 0, 0, 0);
+    border-left-width: 0;
+    border-right-width: 0;
+    border-top-width: 0;
+    border-bottom-width: 0;
+    margin-left: -10px;
+    align-self: center;
+}
