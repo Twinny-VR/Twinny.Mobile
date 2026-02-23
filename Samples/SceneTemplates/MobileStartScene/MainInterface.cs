@@ -19,6 +19,7 @@ namespace Twinny.Mobile.Samples
         private const string CutoffSliderName = "CutoffSlider";
 
         [SerializeField] private UIDocument _document;
+        [SerializeField] private float _maxWallHeight = 3.0f;
         private Button _startButton;
         private Button _immersiveButton;
         private Button _mockupButton;
@@ -28,6 +29,8 @@ namespace Twinny.Mobile.Samples
         private VisualElement _loadingOverlay;
         private VisualElement _loadingBarFill;
         private Slider _cutoffSlider;
+        private bool _isCutoffPointerDragging;
+        private int _cutoffPointerId = -1;
         private bool _warnedMissingRoot;
         private bool _warnedMissingStart;
         private bool _warnedMissingImmersive;
@@ -90,6 +93,13 @@ namespace Twinny.Mobile.Samples
             if (_loadingOverlay == null) WarnMissingLoadingOverlay();
             if (_loadingBarFill == null) WarnMissingLoadingBar();
             if (_cutoffSlider == null) WarnMissingCutoffSlider();
+
+            if (_cutoffSlider != null)
+            {
+                _cutoffSlider.lowValue = 0f;
+                _cutoffSlider.highValue = _maxWallHeight;
+                _cutoffSlider.pageSize = 0.001f;
+            }
         }
 
         private void RegisterCallbacks()
@@ -108,6 +118,14 @@ namespace Twinny.Mobile.Samples
 
             if (_cutoffSlider != null)
                 _cutoffSlider.RegisterValueChangedCallback(HandleCutoffChanged);
+
+            if (_cutoffSlider != null)
+            {
+                _cutoffSlider.RegisterCallback<PointerDownEvent>(HandleCutoffPointerDown, TrickleDown.TrickleDown);
+                _cutoffSlider.RegisterCallback<PointerMoveEvent>(HandleCutoffPointerMove, TrickleDown.TrickleDown);
+                _cutoffSlider.RegisterCallback<PointerUpEvent>(HandleCutoffPointerUp, TrickleDown.TrickleDown);
+                _cutoffSlider.RegisterCallback<PointerCancelEvent>(HandleCutoffPointerCancel, TrickleDown.TrickleDown);
+            }
         }
 
         private void UnregisterCallbacks()
@@ -126,6 +144,15 @@ namespace Twinny.Mobile.Samples
 
             if (_cutoffSlider != null)
                 _cutoffSlider.UnregisterValueChangedCallback(HandleCutoffChanged);
+
+            if (_cutoffSlider != null)
+            {
+                _cutoffSlider.UnregisterCallback<PointerDownEvent>(HandleCutoffPointerDown, TrickleDown.TrickleDown);
+                _cutoffSlider.UnregisterCallback<PointerMoveEvent>(HandleCutoffPointerMove, TrickleDown.TrickleDown);
+                _cutoffSlider.UnregisterCallback<PointerUpEvent>(HandleCutoffPointerUp, TrickleDown.TrickleDown);
+                _cutoffSlider.UnregisterCallback<PointerCancelEvent>(HandleCutoffPointerCancel, TrickleDown.TrickleDown);
+                ReleaseCutoffPointer();
+            }
         }
 
         private void HandleStartClicked()
@@ -153,6 +180,70 @@ namespace Twinny.Mobile.Samples
         private void HandleCutoffChanged(ChangeEvent<float> evt)
         {
             Shader.SetGlobalFloat("_CutoffHeight", evt.newValue);
+        }
+
+        private void HandleCutoffPointerDown(PointerDownEvent evt)
+        {
+            if (_cutoffSlider == null)
+                return;
+
+            _isCutoffPointerDragging = true;
+            _cutoffPointerId = evt.pointerId;
+            _cutoffSlider.CapturePointer(_cutoffPointerId);
+            SetCutoffFromPointer(evt.position);
+            evt.StopImmediatePropagation();
+        }
+
+        private void HandleCutoffPointerMove(PointerMoveEvent evt)
+        {
+            if (_cutoffSlider == null || !_isCutoffPointerDragging || evt.pointerId != _cutoffPointerId)
+                return;
+
+            SetCutoffFromPointer(evt.position);
+            evt.StopImmediatePropagation();
+        }
+
+        private void HandleCutoffPointerUp(PointerUpEvent evt)
+        {
+            if (_cutoffSlider == null || evt.pointerId != _cutoffPointerId)
+                return;
+
+            SetCutoffFromPointer(evt.position);
+            ReleaseCutoffPointer();
+            evt.StopImmediatePropagation();
+        }
+
+        private void HandleCutoffPointerCancel(PointerCancelEvent evt)
+        {
+            if (_cutoffSlider == null || evt.pointerId != _cutoffPointerId)
+                return;
+
+            ReleaseCutoffPointer();
+            evt.StopImmediatePropagation();
+        }
+
+        private void SetCutoffFromPointer(Vector2 pointerPosition)
+        {
+            if (_cutoffSlider == null)
+                return;
+
+            VisualElement dragContainer = _cutoffSlider.Q("unity-drag-container");
+            Rect dragRect = dragContainer != null ? dragContainer.worldBound : _cutoffSlider.worldBound;
+            if (dragRect.height <= 0f)
+                return;
+
+            float t = Mathf.InverseLerp(dragRect.yMax, dragRect.yMin, pointerPosition.y);
+            float value = Mathf.Lerp(_cutoffSlider.lowValue, _cutoffSlider.highValue, t);
+            _cutoffSlider.value = Mathf.Clamp(value, _cutoffSlider.lowValue, _cutoffSlider.highValue);
+        }
+
+        private void ReleaseCutoffPointer()
+        {
+            if (_cutoffSlider != null && _cutoffPointerId >= 0 && _cutoffSlider.HasPointerCapture(_cutoffPointerId))
+                _cutoffSlider.ReleasePointer(_cutoffPointerId);
+
+            _isCutoffPointerDragging = false;
+            _cutoffPointerId = -1;
         }
 
         public void OnImmersiveRequested()

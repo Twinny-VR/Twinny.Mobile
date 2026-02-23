@@ -1,4 +1,4 @@
-using System.Collections;
+using System.Threading.Tasks;
 using Concept.Core;
 using Twinny.Core;
 using Twinny.UI;
@@ -9,7 +9,8 @@ namespace Twinny.Mobile
 {
     public class TwinnyMobileManager : MonoBehaviour, IMobileUICallbacks
     {
-        private const string MobileStartSceneName = "MobileStartScene";
+        private const string START_SCENE_NAME = "MobileStartScene";
+        private const string MOCKUP_SCENE_NAME = "MobileMockupScene";
 
         private void OnEnable()
         {
@@ -21,20 +22,19 @@ namespace Twinny.Mobile
             CallbackHub.UnregisterCallback<IMobileUICallbacks>(this);
         }
 
-        private void Start()
+        private async void Start()
         {
-          Initialize();
+            await InitializeAsync();
         }
 
         private void Update()
         {
         }
 
-        public void Initialize()
+        public async Task InitializeAsync()
         {
             StateMachine.ChangeState(new IdleState(this));
-            //TODO Decidir como fazer o carregamento das cenas
-            StartCoroutine(LoadSceneWithProgress(MobileStartSceneName, LoadSceneMode.Additive));
+            await LoadSceneWithProgressAsync(START_SCENE_NAME, LoadSceneMode.Additive);
         }
 
         public async void OnImmersiveRequested()
@@ -57,37 +57,42 @@ namespace Twinny.Mobile
 
         }
 
-        public void OnStartExperienceRequested()
+        public async void OnStartExperienceRequested()
         {
-            StartCoroutine(StartExperienceSequence());
+            await StartExperienceSequenceAsync();
         }
 
         public void OnLoadingProgressChanged(float progress) { }
         public void OnExperienceLoaded() { }
         public void OnGyroscopeToggled(bool enabled) { }
 
-        private static IEnumerator LoadSceneWithProgress(string sceneName, LoadSceneMode mode)
+        private static async Task LoadSceneWithProgressAsync(string sceneName, LoadSceneMode mode)
         {
+            CallbackHub.CallAction<ITwinnyMobileCallbacks>(callback => callback.OnSceneLoadStart(sceneName));
             CallbackHub.CallAction<IMobileUICallbacks>(callback => callback.OnLoadingProgressChanged(0f));
-            AsyncOperation async = SceneManager.LoadSceneAsync(sceneName, mode);
-            if (async == null)
-                yield break;
+            AsyncOperation loadOperation = SceneManager.LoadSceneAsync(sceneName, mode);
+            if (loadOperation == null)
+                return;
 
-            while (!async.isDone)
+            while (!loadOperation.isDone)
             {
-                float normalized = Mathf.Clamp01(async.progress / 0.9f);
+                float normalized = Mathf.Clamp01(loadOperation.progress / 0.9f);
                 CallbackHub.CallAction<IMobileUICallbacks>(callback => callback.OnLoadingProgressChanged(normalized));
-                yield return null;
+                await Task.Yield();
             }
 
             CallbackHub.CallAction<IMobileUICallbacks>(callback => callback.OnLoadingProgressChanged(1f));
-            _ = CanvasTransition.FadeScreenAsync(false, 1f, renderMode: RenderMode.ScreenSpaceOverlay);
 
+            Scene loadedScene = SceneManager.GetSceneByName(sceneName);
+            if (loadedScene.IsValid())
+                CallbackHub.CallAction<ITwinnyMobileCallbacks>(callback => callback.OnSceneLoaded(loadedScene));
+
+            await CanvasTransition.FadeScreenAsync(false, 1f, renderMode: RenderMode.ScreenSpaceOverlay);
         }
 
-        private IEnumerator StartExperienceSequence()
+        private async Task StartExperienceSequenceAsync()
         {
-            yield return LoadSceneWithProgress("MobileMockupScene", LoadSceneMode.Additive);
+            await LoadSceneWithProgressAsync(MOCKUP_SCENE_NAME, LoadSceneMode.Additive);
             StateMachine.ChangeState(new MobileMockupState(this));
             CallbackHub.CallAction<ITwinnyMobileCallbacks>(callback => callback.OnExperienceLoaded());
         }
