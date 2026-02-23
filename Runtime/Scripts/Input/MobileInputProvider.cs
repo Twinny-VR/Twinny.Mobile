@@ -53,6 +53,8 @@ namespace Twinny.Mobile.Input
         private bool _warnedMissingRouter;
         private UIDocument[] _uiDocuments;
         private int _uiDocumentsFrame;
+        private readonly HashSet<int> _uiBlockedTouchIds = new HashSet<int>();
+        private bool _mouseBlockedByUi;
 
 #if (UNITY_ANDROID || UNITY_IOS || UNITY_WEBGL) && !UNITY_EDITOR
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
@@ -203,7 +205,6 @@ namespace Twinny.Mobile.Input
             return;
 #endif
             EnsureSettingsLoaded();
-            if (IsPointerOverUi()) return;
 
             int touchCount = UnityInput.touchCount;
 
@@ -230,26 +231,25 @@ namespace Twinny.Mobile.Input
         {
             if (UnityInput.touchCount <= 0)
             {
-                if (EventSystem.current?.IsPointerOverGameObject() == true)
-                    return true;
-
-                if (IsPointerOverUiToolkit(UnityInput.mousePosition))
-                    return true;
-
-                return false;
+                return IsPointerOverUi(-1, UnityInput.mousePosition);
             }
 
             for (int i = 0; i < UnityInput.touchCount; i++)
             {
                 Touch touch = UnityInput.GetTouch(i);
-                if (EventSystem.current?.IsPointerOverGameObject(touch.fingerId) == true)
-                    return true;
-
-                if (IsPointerOverUiToolkit(touch.position))
+                if (IsPointerOverUi(touch.fingerId, touch.position))
                     return true;
             }
 
             return false;
+        }
+
+        private bool IsPointerOverUi(int pointerId, Vector2 screenPosition)
+        {
+            if (EventSystem.current?.IsPointerOverGameObject(pointerId) == true)
+                return true;
+
+            return IsPointerOverUiToolkit(screenPosition);
         }
 
         private bool IsPointerOverUiToolkit(Vector2 screenPosition)
@@ -267,7 +267,7 @@ namespace Twinny.Mobile.Input
 
                 Vector2 panelPosition = RuntimePanelUtils.ScreenToPanel(panel, screenPosition);
                 VisualElement picked = panel.Pick(panelPosition);
-                if (picked != null && picked.pickingMode != PickingMode.Ignore)
+                if (picked != null)
                     return true;
             }
 
@@ -298,6 +298,27 @@ namespace Twinny.Mobile.Input
             if (router == null) return;
 
             Touch t = UnityInput.GetTouch(0);
+
+            if (t.phase == TouchPhase.Began)
+            {
+                if (IsPointerOverUi(t.fingerId, t.position))
+                {
+                    _uiBlockedTouchIds.Add(t.fingerId);
+                    return;
+                }
+
+                _uiBlockedTouchIds.Remove(t.fingerId);
+            }
+
+            if (_uiBlockedTouchIds.Contains(t.fingerId))
+            {
+                if (t.phase == TouchPhase.Ended || t.phase == TouchPhase.Canceled)
+                {
+                    _uiBlockedTouchIds.Remove(t.fingerId);
+                    _touchHistories.Remove(t.fingerId);
+                }
+                return;
+            }
 
             switch (t.phase)
             {
@@ -343,11 +364,13 @@ namespace Twinny.Mobile.Input
 
                     // Remove from history
                     _touchHistories.Remove(t.fingerId);
+                    _uiBlockedTouchIds.Remove(t.fingerId);
                     break;
 
                 case TouchPhase.Canceled:
                     router.Cancel();
                     _touchHistories.Remove(t.fingerId);
+                    _uiBlockedTouchIds.Remove(t.fingerId);
                     break;
             }
         }
@@ -369,10 +392,14 @@ namespace Twinny.Mobile.Input
 
             if (isMouseDown)
             {
+                _mouseBlockedByUi = IsPointerOverUi(-1, currentMousePos);
                 _touchStartPos = currentMousePos;
                 _touchStartTime = Time.time;
                 _isDragging = false;
                 _lastMousePos = currentMousePos;
+
+                if (_mouseBlockedByUi)
+                    return;
 
                 _touchHistories[-1] = new TouchHistory
                 {
@@ -385,6 +412,12 @@ namespace Twinny.Mobile.Input
             }
             else if (isMouseHeld)
             {
+                if (_mouseBlockedByUi)
+                {
+                    _lastMousePos = currentMousePos;
+                    return;
+                }
+
                 Vector2 delta = currentMousePos - _lastMousePos;
 
                 if (!_isDragging && Vector2.Distance(currentMousePos, _touchStartPos) > _settings.DragThreshold)
@@ -402,6 +435,13 @@ namespace Twinny.Mobile.Input
             }
             else if (isMouseUp)
             {
+                if (_mouseBlockedByUi)
+                {
+                    _mouseBlockedByUi = false;
+                    _touchHistories.Remove(-1);
+                    return;
+                }
+
                 if (!_isDragging)
                 {
                     ProcessTap(currentMousePos);
@@ -425,6 +465,26 @@ namespace Twinny.Mobile.Input
 
             Touch t0 = UnityInput.GetTouch(0);
             Touch t1 = UnityInput.GetTouch(1);
+
+            if (t0.phase == TouchPhase.Began)
+            {
+                if (IsPointerOverUi(t0.fingerId, t0.position)) _uiBlockedTouchIds.Add(t0.fingerId);
+                else _uiBlockedTouchIds.Remove(t0.fingerId);
+            }
+
+            if (t1.phase == TouchPhase.Began)
+            {
+                if (IsPointerOverUi(t1.fingerId, t1.position)) _uiBlockedTouchIds.Add(t1.fingerId);
+                else _uiBlockedTouchIds.Remove(t1.fingerId);
+            }
+
+            bool hasUiBlockedTouch = _uiBlockedTouchIds.Contains(t0.fingerId) || _uiBlockedTouchIds.Contains(t1.fingerId);
+            if (hasUiBlockedTouch)
+            {
+                if (t0.phase == TouchPhase.Ended || t0.phase == TouchPhase.Canceled) _uiBlockedTouchIds.Remove(t0.fingerId);
+                if (t1.phase == TouchPhase.Ended || t1.phase == TouchPhase.Canceled) _uiBlockedTouchIds.Remove(t1.fingerId);
+                return;
+            }
 
             float currentDist = Vector2.Distance(t0.position, t1.position);
 
@@ -539,6 +599,9 @@ namespace Twinny.Mobile.Input
                     MobileInputEvents.Tap(center);
                 }
             }
+
+            if (t0.phase == TouchPhase.Ended || t0.phase == TouchPhase.Canceled) _uiBlockedTouchIds.Remove(t0.fingerId);
+            if (t1.phase == TouchPhase.Ended || t1.phase == TouchPhase.Canceled) _uiBlockedTouchIds.Remove(t1.fingerId);
         }
 
         /// <summary>

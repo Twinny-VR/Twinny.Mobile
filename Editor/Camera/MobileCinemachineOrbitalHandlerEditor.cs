@@ -43,6 +43,7 @@ namespace Twinny.Mobile.Editor.Camera
             public float maxPanDistance;
             public bool returnTrackingTargetToOriginOnRelease;
             public int panTargetMode;
+            public float maxWallHeight;
             public Vector2 verticalAxisLimits;
             public Vector2 radiusLimits;
             public float fov;
@@ -68,6 +69,7 @@ namespace Twinny.Mobile.Editor.Camera
             root.styleSheets.Add(_styleSheet);
 
             AddHandlerFields(root.Q<VisualElement>("handlerFields"));
+            AddCutoffFields(root.Q<VisualElement>("cutoffFields"));
             AddCinemachineFields(root.Q<VisualElement>("cinemachineFields"));
             AddActionButtons(root.Q<VisualElement>("actionsFields"));
             ApplyHeroIcon(root);
@@ -126,6 +128,12 @@ namespace Twinny.Mobile.Editor.Camera
         {
             yield return "_cinemachineCamera";
             yield return "_orbitalFollow";
+        }
+
+        private void AddCutoffFields(VisualElement container)
+        {
+            if (container == null) return;
+            AddProperty(container, serializedObject.FindProperty("_maxWallHeight"), serializedObject);
         }
 
         private void AddCinemachineFields(VisualElement container)
@@ -481,6 +489,7 @@ namespace Twinny.Mobile.Editor.Camera
                 maxPanDistance = GetFloat(handler, "_maxPanDistance"),
                 returnTrackingTargetToOriginOnRelease = GetBool(handler, "_returnTrackingTargetToOriginOnRelease"),
                 panTargetMode = GetInt(handler, "_panTargetMode"),
+                maxWallHeight = GetFloat(handler, "_maxWallHeight"),
                 verticalAxisLimits = GetVector2(handler, "_verticalAxisLimits"),
                 radiusLimits = GetVector2(handler, "_radiusLimits"),
                 fov = cam != null ? cam.Lens.FieldOfView : 0f,
@@ -564,6 +573,7 @@ namespace Twinny.Mobile.Editor.Camera
             SetFloat(handlerSo, "_maxPanDistance", payload.maxPanDistance);
             SetBool(handlerSo, "_returnTrackingTargetToOriginOnRelease", payload.returnTrackingTargetToOriginOnRelease);
             SetInt(handlerSo, "_panTargetMode", payload.panTargetMode);
+            SetFloat(handlerSo, "_maxWallHeight", payload.maxWallHeight);
             SetVector2(handlerSo, "_verticalAxisLimits", payload.verticalAxisLimits);
             SetVector2(handlerSo, "_radiusLimits", payload.radiusLimits);
             SetObjectRef(handlerSo, "_customPanTarget", GetObjectFromId<Transform>(payload.customPanTargetId));

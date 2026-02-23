@@ -16,6 +16,10 @@
             <ui:Label text="Gesture Tuning" class="section-title"/>
             <ui:VisualElement name="handlerFields" class="fields"/>
         </ui:VisualElement>
+        <ui:VisualElement name="cutoffSection" class="section">
+            <ui:Label text="Cutoff Settings" class="section-title"/>
+            <ui:VisualElement name="cutoffFields" class="fields"/>
+        </ui:VisualElement>
         <ui:VisualElement name="actionsSection" class="section">
             <ui:Label text="Quick Actions" class="section-title"/>
             <ui:VisualElement name="actionsFields" class="fields"/>

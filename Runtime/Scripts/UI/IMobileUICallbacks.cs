@@ -31,5 +31,7 @@ namespace Twinny.Mobile
         /// </summary>
         /// <param name="enabled">True if gyroscope should be enabled.</param>
         void OnGyroscopeToggled(bool enabled);
+
+        void OnMaxWallHeightRequested(float height);
     }
 }

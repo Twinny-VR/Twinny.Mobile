@@ -3,6 +3,7 @@ using Concept.Core;
 using Twinny.Core.Input;
 using UnityEngine;
 using UnityEngine.EventSystems;
+using UnityEngine.UIElements;
 
 namespace Twinny.Mobile.Input
 {
@@ -17,11 +18,14 @@ namespace Twinny.Mobile.Input
         private bool _warnedMissingSettings;
         private bool _warnedMissingRouter;
         [SerializeField] private bool _logTapDebug = false;
-        [SerializeField] private bool _ignoreUiBlocking = true;
+        [SerializeField] private bool _ignoreUiBlocking = false;
         private bool _loggedStartup;
+        private UIDocument[] _uiDocuments;
+        private int _uiDocumentsFrame;
 
         private bool _singleDown;
         private bool _singleDragging;
+        private bool _singleBlockedByUi;
         private bool _suppressTap;
         private Vector3 _singleStartPos;
         private float _singleStartTime;
@@ -29,6 +33,7 @@ namespace Twinny.Mobile.Input
 
         private bool _twoFingerDown;
         private bool _twoFingerDragging;
+        private bool _twoFingerBlockedByUi;
         private Vector3 _lastTwoFingerPos;
         private float _twoFingerStartTime;
         private bool _twoFingerLongPressDetected;
@@ -36,10 +41,12 @@ namespace Twinny.Mobile.Input
 
         private bool _threeFingerDown;
         private bool _threeFingerDragging;
+        private bool _threeFingerBlockedByUi;
         private Vector3 _lastThreeFingerPos;
         private float _threeFingerStartTime;
 
         private bool _mousePinchDown;
+        private bool _mousePinchBlockedByUi;
         private Vector3 _lastMousePinchPos;
 
         private void Awake()
@@ -73,8 +80,6 @@ namespace Twinny.Mobile.Input
             ForceReleaseIfButtonsUp();
             if (_suppressSingleUntilRelease && !UnityEngine.Input.GetMouseButton(0))
                 _suppressSingleUntilRelease = false;
-            if (!_ignoreUiBlocking && EventSystem.current?.IsPointerOverGameObject() == true)
-                return;
 
             if (HandleThreeFinger()) return;
             if (HandleTwoFinger()) return;
@@ -102,6 +107,7 @@ namespace Twinny.Mobile.Input
             _twoFingerStartTime = Time.time;
             _twoFingerLongPressDetected = false;
             _lastTwoFingerPos = UnityEngine.Input.mousePosition;
+            _twoFingerBlockedByUi = !_ignoreUiBlocking && IsPointerOverUiAt(_lastTwoFingerPos);
             _suppressSingleUntilRelease = true;
             _suppressTap = true;
             _singleDown = false;
@@ -111,6 +117,12 @@ namespace Twinny.Mobile.Input
         private void UpdateTwoFinger()
         {
             Vector3 current = UnityEngine.Input.mousePosition;
+            if (_twoFingerBlockedByUi)
+            {
+                _lastTwoFingerPos = current;
+                return;
+            }
+
             Vector2 delta = (Vector2)(current - _lastTwoFingerPos);
             if (delta.sqrMagnitude > 0f)
             {
@@ -140,6 +152,14 @@ namespace Twinny.Mobile.Input
 
         private void EndTwoFinger()
         {
+            if (_twoFingerBlockedByUi)
+            {
+                _twoFingerDown = false;
+                _twoFingerDragging = false;
+                _twoFingerBlockedByUi = false;
+                return;
+            }
+
             Vector2 center = _lastTwoFingerPos;
             float elapsed = Time.time - _twoFingerStartTime;
             if (!_twoFingerDragging && elapsed <= TwoFingerTapMaxTime)
@@ -179,11 +199,18 @@ namespace Twinny.Mobile.Input
             _threeFingerDragging = false;
             _threeFingerStartTime = Time.time;
             _lastThreeFingerPos = UnityEngine.Input.mousePosition;
+            _threeFingerBlockedByUi = !_ignoreUiBlocking && IsPointerOverUiAt(_lastThreeFingerPos);
         }
 
         private void UpdateThreeFinger()
         {
             Vector3 current = UnityEngine.Input.mousePosition;
+            if (_threeFingerBlockedByUi)
+            {
+                _lastThreeFingerPos = current;
+                return;
+            }
+
             Vector2 delta = (Vector2)(current - _lastThreeFingerPos);
             if (delta.sqrMagnitude > 0f)
             {
@@ -200,6 +227,15 @@ namespace Twinny.Mobile.Input
 
         private void EndThreeFinger()
         {
+            if (_threeFingerBlockedByUi)
+            {
+                _threeFingerDown = false;
+                _threeFingerDragging = false;
+                _threeFingerBlockedByUi = false;
+                _suppressTap = false;
+                return;
+            }
+
             Vector2 center = _lastThreeFingerPos;
             float elapsed = Time.time - _threeFingerStartTime;
             if (!_threeFingerDragging && elapsed <= TapMaxTime)
@@ -231,6 +267,7 @@ namespace Twinny.Mobile.Input
         {
             _mousePinchDown = true;
             _lastMousePinchPos = UnityEngine.Input.mousePosition;
+            _mousePinchBlockedByUi = !_ignoreUiBlocking && IsPointerOverUiAt(_lastMousePinchPos);
             _suppressSingleUntilRelease = true;
             _singleDown = false;
             _singleDragging = false;
@@ -238,6 +275,12 @@ namespace Twinny.Mobile.Input
 
         private void UpdateMousePinch()
         {
+            if (_mousePinchBlockedByUi)
+            {
+                _lastMousePinchPos = UnityEngine.Input.mousePosition;
+                return;
+            }
+
             var router = TryGetRouter();
             if (router == null) return;
 
@@ -255,6 +298,7 @@ namespace Twinny.Mobile.Input
         private void EndMousePinch()
         {
             _mousePinchDown = false;
+            _mousePinchBlockedByUi = false;
         }
 
         private void HandleSingleFinger()
@@ -276,12 +320,21 @@ namespace Twinny.Mobile.Input
                 _singleStartPos = UnityEngine.Input.mousePosition;
                 _lastSinglePos = _singleStartPos;
                 _singleStartTime = Time.time;
+                _singleBlockedByUi = !_ignoreUiBlocking && IsPointerOverUiAt(_singleStartPos);
+                if (_singleBlockedByUi)
+                    return;
                 router.PrimaryDown(_singleStartPos.x, _singleStartPos.y);
             }
 
             if (_singleDown && UnityEngine.Input.GetMouseButton(0))
             {
                 Vector3 current = UnityEngine.Input.mousePosition;
+                if (_singleBlockedByUi)
+                {
+                    _lastSinglePos = current;
+                    return;
+                }
+
                 Vector2 delta = (Vector2)(current - _lastSinglePos);
                 if (delta.sqrMagnitude > _settings.DragThreshold * _settings.DragThreshold)
                 {
@@ -296,6 +349,15 @@ namespace Twinny.Mobile.Input
             if (_singleDown && UnityEngine.Input.GetMouseButtonUp(0))
             {
                 Vector3 current = UnityEngine.Input.mousePosition;
+                if (_singleBlockedByUi)
+                {
+                    _singleDown = false;
+                    _singleDragging = false;
+                    _singleBlockedByUi = false;
+                    _suppressTap = false;
+                    return;
+                }
+
                 router.PrimaryUp(current.x, current.y);
                 if (!_singleDragging && !_suppressTap && Time.time - _singleStartTime <= TapMaxTime)
                 {
@@ -304,6 +366,7 @@ namespace Twinny.Mobile.Input
                 }
                 _singleDown = false;
                 _singleDragging = false;
+                _singleBlockedByUi = false;
                 _suppressTap = false;
             }
         }
@@ -327,13 +390,14 @@ namespace Twinny.Mobile.Input
             if (_singleDown && !UnityEngine.Input.GetMouseButton(0))
             {
                 var router = TryGetRouter();
-                if (router != null && !_singleDragging && !_suppressTap && Time.time - _singleStartTime <= TapMaxTime)
+                if (!_singleBlockedByUi && router != null && !_singleDragging && !_suppressTap && Time.time - _singleStartTime <= TapMaxTime)
                 {
                     TrySelect(_lastSinglePos, router);
                     MobileInputEvents.Tap(_lastSinglePos);
                 }
                 _singleDown = false;
                 _singleDragging = false;
+                _singleBlockedByUi = false;
                 _suppressSingleUntilRelease = false;
                 _suppressTap = false;
             }
@@ -354,12 +418,59 @@ namespace Twinny.Mobile.Input
         {
             _singleDown = false;
             _singleDragging = false;
+            _singleBlockedByUi = false;
             _twoFingerDown = false;
             _twoFingerDragging = false;
             _twoFingerLongPressDetected = false;
+            _twoFingerBlockedByUi = false;
             _threeFingerDown = false;
             _threeFingerDragging = false;
+            _threeFingerBlockedByUi = false;
+            _mousePinchDown = false;
+            _mousePinchBlockedByUi = false;
             _suppressSingleUntilRelease = false;
+            _suppressTap = false;
+        }
+
+        private bool IsPointerOverUiAt(Vector2 screenPosition)
+        {
+            if (EventSystem.current?.IsPointerOverGameObject() == true)
+                return true;
+
+            return IsPointerOverUiToolkit(screenPosition);
+        }
+
+        private bool IsPointerOverUiToolkit(Vector2 screenPosition)
+        {
+            UIDocument[] documents = GetUiDocuments();
+            if (documents == null || documents.Length == 0) return false;
+
+            for (int i = 0; i < documents.Length; i++)
+            {
+                UIDocument document = documents[i];
+                if (document == null || document.rootVisualElement == null) continue;
+
+                var panel = document.rootVisualElement.panel;
+                if (panel == null) continue;
+
+                Vector2 panelPosition = RuntimePanelUtils.ScreenToPanel(panel, screenPosition);
+                VisualElement picked = panel.Pick(panelPosition);
+                if (picked != null)
+                    return true;
+            }
+
+            return false;
+        }
+
+        private UIDocument[] GetUiDocuments()
+        {
+            if (_uiDocuments == null || (Time.frameCount - _uiDocumentsFrame) > 30)
+            {
+                _uiDocuments = FindObjectsOfType<UIDocument>();
+                _uiDocumentsFrame = Time.frameCount;
+            }
+
+            return _uiDocuments;
         }
 
         private void HandleScroll()
@@ -368,6 +479,9 @@ namespace Twinny.Mobile.Input
             if (router == null) return;
 
             if (UnityEngine.Input.GetMouseButton(2))
+                return;
+
+            if (!_ignoreUiBlocking && IsPointerOverUiAt(UnityEngine.Input.mousePosition))
                 return;
 
             float scroll = UnityEngine.Input.GetAxis("Mouse ScrollWheel");

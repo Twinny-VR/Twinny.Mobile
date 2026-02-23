@@ -1,5 +1,6 @@
 using Concept.Core;
 using Twinny.Mobile;
+using Twinny.Mobile.Navigation;
 using UnityEngine;
 using UnityEngine.UIElements;
 
@@ -14,19 +15,19 @@ namespace Twinny.Mobile.Samples
         private const string GyroToggleButtonName = "GyroToggleButton";
         private const string MainUiName = "MainUI";
         private const string ExperienceUiName = "ExperienceUI";
-        private const string LoadingOverlayName = "LoadingOverlay";
+        private const string LoadingOverlayRootName = "LoadingOverlayRoot";
         private const string LoadingBarFillName = "LoadingBarFill";
         private const string CutoffSliderName = "CutoffSlider";
 
+
         [SerializeField] private UIDocument _document;
-        [SerializeField] private float _maxWallHeight = 3.0f;
         private Button _startButton;
         private Button _immersiveButton;
         private Button _mockupButton;
         private Button _gyroToggleButton;
         private VisualElement _mainUi;
         private VisualElement _experienceUi;
-        private VisualElement _loadingOverlay;
+        private VisualElement _loadingOverlayRoot;
         private VisualElement _loadingBarFill;
         private Slider _cutoffSlider;
         private bool _isCutoffPointerDragging;
@@ -38,10 +39,11 @@ namespace Twinny.Mobile.Samples
         private bool _warnedMissingGyroToggle;
         private bool _warnedMissingMainUi;
         private bool _warnedMissingExperienceUi;
-        private bool _warnedMissingLoadingOverlay;
+        private bool _warnedMissingLoadingOverlayRoot;
         private bool _warnedMissingLoadingBar;
         private bool _warnedMissingCutoffSlider;
         private bool _gyroEnabled = true;
+        private bool _isMockupMode;
 
         private void OnEnable()
         {
@@ -80,7 +82,7 @@ namespace Twinny.Mobile.Samples
             _gyroToggleButton = root.Q<Button>(GyroToggleButtonName);
             _mainUi = root.Q<VisualElement>(MainUiName);
             _experienceUi = root.Q<VisualElement>(ExperienceUiName);
-            _loadingOverlay = root.Q<VisualElement>(LoadingOverlayName);
+            _loadingOverlayRoot = root.Q<VisualElement>(LoadingOverlayRootName);
             _loadingBarFill = root.Q<VisualElement>(LoadingBarFillName);
             _cutoffSlider = root.Q<Slider>(CutoffSliderName);
 
@@ -90,16 +92,21 @@ namespace Twinny.Mobile.Samples
             if (_gyroToggleButton == null) WarnMissingGyroToggle();
             if (_mainUi == null) WarnMissingMainUi();
             if (_experienceUi == null) WarnMissingExperienceUi();
-            if (_loadingOverlay == null) WarnMissingLoadingOverlay();
+            if (_loadingOverlayRoot == null) WarnMissingLoadingOverlayRoot();
             if (_loadingBarFill == null) WarnMissingLoadingBar();
             if (_cutoffSlider == null) WarnMissingCutoffSlider();
 
             if (_cutoffSlider != null)
             {
                 _cutoffSlider.lowValue = 0f;
-                _cutoffSlider.highValue = _maxWallHeight;
                 _cutoffSlider.pageSize = 0.001f;
             }
+
+            if (_loadingOverlayRoot != null)
+                _loadingOverlayRoot.style.display = DisplayStyle.None;
+
+            if (_loadingBarFill != null)
+                _loadingBarFill.style.width = Length.Percent(0f);
         }
 
         private void RegisterCallbacks()
@@ -246,6 +253,17 @@ namespace Twinny.Mobile.Samples
             _cutoffPointerId = -1;
         }
 
+        public void OnMaxWallHeightRequested(float height)
+        {
+            if (_cutoffSlider == null)
+                return;
+
+            float maxHeight = Mathf.Max(_cutoffSlider.lowValue, height);
+            _cutoffSlider.highValue = maxHeight;
+            _cutoffSlider.SetValueWithoutNotify(maxHeight);
+            Shader.SetGlobalFloat("_CutoffHeight", maxHeight);
+        }
+
         public void OnImmersiveRequested()
         {
             SetModeButtons(isMockup: false);
@@ -258,7 +276,15 @@ namespace Twinny.Mobile.Samples
 
         public void OnStartExperienceRequested() { }
 
-        public void OnEnterImmersiveMode(){ }
+        public void OnEnterImmersiveMode()
+        {
+            if (_cutoffSlider == null)
+                return;
+
+            float maxHeight = _cutoffSlider.highValue;
+            _cutoffSlider.SetValueWithoutNotify(maxHeight);
+            Shader.SetGlobalFloat("_CutoffHeight", maxHeight);
+        }
         public void OnExitImmersiveMode(){ }
 
         public void OnEnterMockupMode()
@@ -295,19 +321,32 @@ namespace Twinny.Mobile.Samples
         public void OnExperienceStarted() { }
         public void OnExperienceEnding() { }
         public void OnExperienceEnded(bool isRunning) { }
-        public void OnSceneLoadStart(string sceneName) { }
-        public void OnSceneLoaded(UnityEngine.SceneManagement.Scene scene) { }
+        public void OnSceneLoadStart(string sceneName)
+        {
+            if (_loadingOverlayRoot != null)
+                _loadingOverlayRoot.style.display = DisplayStyle.Flex;
+
+            if (_loadingBarFill != null)
+                _loadingBarFill.style.width = Length.Percent(0f);
+        }
+
+        public void OnSceneLoaded(UnityEngine.SceneManagement.Scene scene)
+        {
+            if (_loadingOverlayRoot != null)
+                _loadingOverlayRoot.style.display = DisplayStyle.None;
+
+            ApplyModeButtons();
+        }
         public void OnTeleportToLandMark(int landMarkIndex) { }
         public void OnSkyboxHDRIChanged(Material material) { }
 
         public void OnLoadingProgressChanged(float progress)
         {
-            if (_loadingBarFill == null || _loadingOverlay == null)
+            if (_loadingBarFill == null)
                 return;
 
             float clamped = Mathf.Clamp01(progress);
             _loadingBarFill.style.width = Length.Percent(clamped * 100f);
-            _loadingOverlay.style.display = (clamped >= 0.01f && clamped < 1f) ? DisplayStyle.Flex : DisplayStyle.None;
         }
 
         public void OnGyroscopeToggled(bool enabled) { }
@@ -361,11 +400,11 @@ namespace Twinny.Mobile.Samples
             Debug.LogWarning("[MainInterface] ExperienceUI not found in UXML.");
         }
 
-        private void WarnMissingLoadingOverlay()
+        private void WarnMissingLoadingOverlayRoot()
         {
-            if (_warnedMissingLoadingOverlay) return;
-            _warnedMissingLoadingOverlay = true;
-            Debug.LogWarning("[MainInterface] LoadingOverlay not found in UXML.");
+            if (_warnedMissingLoadingOverlayRoot) return;
+            _warnedMissingLoadingOverlayRoot = true;
+            Debug.LogWarning("[MainInterface] LoadingOverlayRoot not found in UXML.");
         }
 
         private void WarnMissingLoadingBar()
@@ -384,17 +423,25 @@ namespace Twinny.Mobile.Samples
 
         private void SetModeButtons(bool isMockup)
         {
+            _isMockupMode = isMockup;
+            ApplyModeButtons();
+        }
+
+        private void ApplyModeButtons()
+        {
+            bool canShowFpsControls = _isMockupMode && MobileFpsNavigation.HasActiveInstance;
+
             if (_immersiveButton != null)
-                _immersiveButton.style.display = isMockup ? DisplayStyle.Flex : DisplayStyle.None;
+                _immersiveButton.style.display = canShowFpsControls ? DisplayStyle.Flex : DisplayStyle.None;
 
             if (_mockupButton != null)
-                _mockupButton.style.display = isMockup ? DisplayStyle.None : DisplayStyle.Flex;
+                _mockupButton.style.display = _isMockupMode ? DisplayStyle.None : DisplayStyle.Flex;
 
             if (_gyroToggleButton != null)
-                _gyroToggleButton.style.display = isMockup ? DisplayStyle.None : DisplayStyle.Flex;
+                _gyroToggleButton.style.display = canShowFpsControls ? DisplayStyle.Flex : DisplayStyle.None;
 
             if (_cutoffSlider != null)
-                _cutoffSlider.style.display = isMockup ? DisplayStyle.Flex : DisplayStyle.None;
+                _cutoffSlider.style.display = _isMockupMode ? DisplayStyle.Flex : DisplayStyle.None;
         }
 
         private void UpdateGyroToggleLabel()

@@ -1,21 +1,28 @@
 <ui:UXML xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" noNamespaceSchemaLocation="../../../../../UIElementsSchema/UIElements.xsd" editor-extension-mode="False">
     <Style src="project://database/Packages/com.twinny.mobile/Samples/SceneTemplates/MobileStartScene/MainInterfaceStyles.uss?fileID=7433441132597879392&amp;guid=fa500c47d5259e04092dec0cbd56bb8d&amp;type=3#MainInterfaceStyles"/>
-    <ui:VisualElement name="MainUI" class="main-ui" picking-mode="Ignore">
-        <ui:Button text="Iniciar" name="StartButton" class="start-button"/>
-    </ui:VisualElement>
-    <ui:VisualElement name="ExperienceUI" class="experience-ui" picking-mode="Ignore">
-        <ui:VisualElement name="SideBar" class="side-bar" picking-mode="Ignore" style="position: absolute; right: 0; top: 20%; bottom: 20%; justify-content: center;">
-            <ui:Slider name="CutoffSlider" direction="Vertical" low-value="0.0" high-value="1.0" value="0.0" class="cutoff-slider" style="background-color: rgba(0,0,0,0); border-width: 0;"/>
+    <ui:VisualElement name="MainInterfaceRoot" picking-mode="Ignore" class="main-interface-root" style="width: 100%; height: 100%;">
+        <ui:VisualElement name="GlobalUIRoot" picking-mode="Ignore" class="global-ui-root" style="display: flex; height: 100%; width: 100%;">
+            <ui:VisualElement name="MainUI" picking-mode="Ignore" class="main-ui" style="display: none;">
+                <ui:Button text="Iniciar" name="StartButton" class="start-button"/>
+            </ui:VisualElement>
+            <ui:VisualElement name="ExperienceUI" picking-mode="Ignore" class="experience-ui" style="display: flex;">
+                <ui:VisualElement name="SideBar" picking-mode="Ignore" class="side-bar" style="position: absolute; right: 0; top: 20%; bottom: 20%; justify-content: center;">
+                    <ui:Slider name="CutoffSlider" direction="Vertical" low-value="0.0" high-value="1.0" value="0.0" class="cutoff-slider" style="background-color: rgba(0, 0, 0, 0); border-width: 0;"/>
+                </ui:VisualElement>
+                <ui:VisualElement name="BottomBar" picking-mode="Ignore" class="bottom-bar">
+                    <ui:Button text="Gyro On" name="GyroToggleButton" class="gyro-toggle-button" style="display: none;"/>
+                    <ui:Button text="" name="ImmersiveButton" class="icon-button immersive-button"/>
+                    <ui:Button text="" name="MockupButton" class="icon-button mockup-button"/>
+                </ui:VisualElement>
+            </ui:VisualElement>
         </ui:VisualElement>
-        <ui:VisualElement name="BottomBar" class="bottom-bar" picking-mode="Ignore">
-            <ui:Button text="Gyro On" name="GyroToggleButton" class="gyro-toggle-button"/>
-            <ui:Button text="" name="ImmersiveButton" class="icon-button immersive-button"/>
-            <ui:Button text="" name="MockupButton" class="icon-button mockup-button"/>
+        <ui:VisualElement name="InjectedContentRoot" class="injected-content-root"/>
+        <ui:VisualElement name="SceneOverlayRoot" class="scene-overlay-root"/>
+        <ui:VisualElement name="LoadingOverlayRoot" class="loading-overlay" style="display: none;">
+            <ui:VisualElement name="LoadingBar" class="loading-bar">
+                <ui:VisualElement name="LoadingBarFill" class="loading-bar-fill"/>
+            </ui:VisualElement>
         </ui:VisualElement>
-    </ui:VisualElement>
-    <ui:VisualElement name="LoadingOverlay" class="loading-overlay">
-        <ui:VisualElement name="LoadingBar" class="loading-bar">
-            <ui:VisualElement name="LoadingBarFill" class="loading-bar-fill"/>
-        </ui:VisualElement>
+        <ui:VisualElement name="ModalOverlayRoot" class="modal-overlay-root"/>
     </ui:VisualElement>
 </ui:UXML>

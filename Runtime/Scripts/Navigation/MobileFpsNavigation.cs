@@ -13,6 +13,10 @@ namespace Twinny.Mobile.Navigation
     [RequireComponent(typeof(NavMeshAgent))]
     public class MobileFpsNavigation : MonoBehaviour, IMobileInputCallbacks, ITwinnyMobileCallbacks
     {
+        private static int s_activeInstanceCount;
+
+        public static bool HasActiveInstance => s_activeInstanceCount > 0;
+
         [Header("Navigation")]
         [SerializeField] private NavMeshAgent _agent;
         [SerializeField] private float _maxSampleDistance = 3f;
@@ -39,6 +43,7 @@ namespace Twinny.Mobile.Navigation
 
         private void OnEnable()
         {
+            s_activeInstanceCount++;
             EnsureReferences();
             CallbackHub.RegisterCallback<IMobileInputCallbacks>(this);
             CallbackHub.RegisterCallback<ITwinnyMobileCallbacks>(this);
@@ -46,6 +51,7 @@ namespace Twinny.Mobile.Navigation
 
         private void OnDisable()
         {
+            s_activeInstanceCount = Mathf.Max(0, s_activeInstanceCount - 1);
             CallbackHub.UnregisterCallback<IMobileInputCallbacks>(this);
             CallbackHub.UnregisterCallback<ITwinnyMobileCallbacks>(this);
         }

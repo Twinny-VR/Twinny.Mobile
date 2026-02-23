@@ -47,6 +47,7 @@ namespace Twinny.Mobile.Camera
         [SerializeField] private Vector2 _radiusLimits = new Vector2(0.5f, 50f);
         [SerializeField] private PanTargetMode _panTargetMode = PanTargetMode.TrackingTarget;
         [SerializeField] private Transform _customPanTarget;
+        [SerializeField] private float _maxWallHeight = 3.0f;
 
         private PropertyInfo _radiusProperty;
         private FieldInfo _radiusField;
@@ -435,6 +436,7 @@ namespace Twinny.Mobile.Camera
 
         private void ApplyMode(bool isActive)
         {
+            if(isActive) CallbackHub.CallAction<IMobileUICallbacks>(callback => callback.OnMaxWallHeightRequested(_maxWallHeight));
             _isModeActive = isActive;
             if (_cinemachineCamera != null)
                 _cinemachineCamera.Priority = isActive ? _activePriority : _inactivePriority;
