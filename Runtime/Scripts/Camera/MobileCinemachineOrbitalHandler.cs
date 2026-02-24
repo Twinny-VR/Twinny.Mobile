@@ -46,6 +46,9 @@ namespace Twinny.Mobile.Camera
         [SerializeField] private Vector2 _verticalAxisLimits = new Vector2(-80f, 80f);
         [SerializeField] private Vector2 _radiusLimits = new Vector2(0.5f, 50f);
         [SerializeField] private PanTargetMode _panTargetMode = PanTargetMode.TrackingTarget;
+        [SerializeField] private bool _lockPanX;
+        [SerializeField] private bool _lockPanY = true;
+        [SerializeField] private bool _lockPanZ;
         [SerializeField] private Transform _customPanTarget;
         [SerializeField] private float _maxWallHeight = 3.0f;
 
@@ -231,14 +234,15 @@ namespace Twinny.Mobile.Camera
 
             // Invert input for natural "drag world" feel and scale for pixel coordinates
             Vector3 move = (right * -direction.x + forward * -direction.y) * (_panSpeed * 0.002f * screenScale * zoomFactor);
-            Vector3 finalPos = panTarget.position + move;
-            finalPos.y = panTarget.position.y;
+            Vector3 startPos = panTarget.position;
+            Vector3 finalPos = ApplyPanAxisLocks(startPos + move, startPos);
 
             if (_enablePanLimit)
             {
                 Vector3 offset = finalPos - _initialPanTargetPosition;
+                offset = ApplyPanAxisLocks(offset, Vector3.zero);
                 finalPos = _initialPanTargetPosition + Vector3.ClampMagnitude(offset, _maxPanDistance);
-                finalPos.y = panTarget.position.y;
+                finalPos = ApplyPanAxisLocks(finalPos, startPos);
             }
 
             panTarget.position = finalPos;
@@ -248,9 +252,11 @@ namespace Twinny.Mobile.Camera
         {
             right = Vector3.right;
             forward = Vector3.forward;
+            bool lockYOnly = _lockPanY && !_lockPanX && !_lockPanZ;
+            bool onlyYFree = _lockPanX && !_lockPanY && _lockPanZ;
 
             // Prefer orbital yaw: it's stable even when camera tilt approaches 90 degrees.
-            if (_orbitalFollow != null)
+            if (lockYOnly && _orbitalFollow != null)
             {
                 float yaw = _orbitalFollow.HorizontalAxis.Value;
                 Quaternion yawRot = Quaternion.Euler(0f, yaw, 0f);
@@ -263,10 +269,17 @@ namespace Twinny.Mobile.Camera
             Transform reference = GetPanReference();
             if (reference == null) return false;
 
-            Vector3 flatForward = Vector3.ProjectOnPlane(reference.forward, Vector3.up);
-            if (flatForward.sqrMagnitude > 0.0001f)
+            Vector3 candidateForward;
+            if (lockYOnly)
+                candidateForward = Vector3.ProjectOnPlane(reference.forward, Vector3.up);
+            else if (onlyYFree)
+                candidateForward = Vector3.up;
+            else
+                candidateForward = reference.forward;
+
+            if (candidateForward.sqrMagnitude > 0.0001f)
             {
-                forward = flatForward.normalized;
+                forward = candidateForward.normalized;
                 _lastValidPanForward = forward;
             }
             else if (_lastValidPanForward.sqrMagnitude > 0.0001f)
@@ -278,7 +291,8 @@ namespace Twinny.Mobile.Camera
                 forward = Vector3.forward;
             }
 
-            right = Vector3.Cross(Vector3.up, forward).normalized;
+            right = reference.right.normalized;
+
             if (right.sqrMagnitude <= 0.0001f)
             {
                 right = Vector3.right;
@@ -286,6 +300,14 @@ namespace Twinny.Mobile.Camera
             }
 
             return true;
+        }
+
+        private Vector3 ApplyPanAxisLocks(Vector3 value, Vector3 reference)
+        {
+            if (_lockPanX) value.x = reference.x;
+            if (_lockPanY) value.y = reference.y;
+            if (_lockPanZ) value.z = reference.z;
+            return value;
         }
 
         private void BeginPanIfNeeded()

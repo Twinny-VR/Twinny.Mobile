@@ -1,6 +1,7 @@
 using Concept.Core;
 using Twinny.Mobile;
 using Twinny.Mobile.Navigation;
+using Twinny.Shaders;
 using UnityEngine;
 using UnityEngine.UIElements;
 
@@ -430,7 +431,8 @@ namespace Twinny.Mobile.Samples
         private void ApplyModeButtons()
         {
             bool canShowFpsControls = _isMockupMode && MobileFpsNavigation.HasActiveInstance;
-
+            bool canShowAlphaSlider = _isMockupMode && AlphaClipper.HasActiveInstance;
+            bool canShowGyroToggle = canShowFpsControls && IsMobileWebGlRuntime();
             if (_immersiveButton != null)
                 _immersiveButton.style.display = canShowFpsControls ? DisplayStyle.Flex : DisplayStyle.None;
 
@@ -438,16 +440,25 @@ namespace Twinny.Mobile.Samples
                 _mockupButton.style.display = _isMockupMode ? DisplayStyle.None : DisplayStyle.Flex;
 
             if (_gyroToggleButton != null)
-                _gyroToggleButton.style.display = canShowFpsControls ? DisplayStyle.Flex : DisplayStyle.None;
+                _gyroToggleButton.style.display = canShowGyroToggle ? DisplayStyle.Flex : DisplayStyle.None;
 
             if (_cutoffSlider != null)
-                _cutoffSlider.style.display = _isMockupMode ? DisplayStyle.Flex : DisplayStyle.None;
+                _cutoffSlider.style.display = canShowAlphaSlider ? DisplayStyle.Flex : DisplayStyle.None;
         }
 
         private void UpdateGyroToggleLabel()
         {
             if (_gyroToggleButton == null) return;
             _gyroToggleButton.text = _gyroEnabled ? "Gyro On" : "Gyro Off";
+        }
+
+        private static bool IsMobileWebGlRuntime()
+        {
+#if UNITY_WEBGL && !UNITY_EDITOR
+            return Application.isMobilePlatform || SystemInfo.deviceType == DeviceType.Handheld;
+#else
+            return false;
+#endif
         }
     }
 }

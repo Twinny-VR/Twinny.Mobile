@@ -7,11 +7,11 @@
             </ui:VisualElement>
             <ui:VisualElement name="ExperienceUI" picking-mode="Ignore" class="experience-ui" style="display: flex;">
                 <ui:VisualElement name="SideBar" picking-mode="Ignore" class="side-bar" style="position: absolute; right: 0; top: 20%; bottom: 20%; justify-content: center;">
-                    <ui:Slider name="CutoffSlider" direction="Vertical" low-value="0.0" high-value="1.0" value="0.0" class="cutoff-slider" style="background-color: rgba(0, 0, 0, 0); border-width: 0;"/>
+                    <ui:Slider name="CutoffSlider" direction="Vertical" low-value="0.0" high-value="1.0" value="0.0" class="cutoff-slider" style="background-color: rgba(0, 0, 0, 0); border-width: 0; display: none;"/>
                 </ui:VisualElement>
                 <ui:VisualElement name="BottomBar" picking-mode="Ignore" class="bottom-bar">
                     <ui:Button text="Gyro On" name="GyroToggleButton" class="gyro-toggle-button" style="display: none;"/>
-                    <ui:Button text="" name="ImmersiveButton" class="icon-button immersive-button"/>
+                    <ui:Button text="" name="ImmersiveButton" class="icon-button immersive-button" style="display: none;"/>
                     <ui:Button text="" name="MockupButton" class="icon-button mockup-button"/>
                 </ui:VisualElement>
             </ui:VisualElement>

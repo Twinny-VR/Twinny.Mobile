@@ -135,6 +135,29 @@
     margin-right: 6px;
 }
 
+.axis-toggle-group {
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 8px;
+}
+
+.axis-toggle-item {
+    flex-direction: row;
+    align-items: center;
+    gap: 4px;
+}
+
+.axis-toggle-label {
+    min-width: 10px;
+    color: rgba(200, 210, 215, 0.85);
+}
+
+.axis-toggle {
+    min-width: 18px;
+    margin-right: 6px;
+}
+
 Slider {
     min-height: 18px;
     min-width: 140px;

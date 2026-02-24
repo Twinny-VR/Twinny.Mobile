@@ -43,6 +43,9 @@ namespace Twinny.Mobile.Editor.Camera
             public float maxPanDistance;
             public bool returnTrackingTargetToOriginOnRelease;
             public int panTargetMode;
+            public bool lockPanX;
+            public bool lockPanY;
+            public bool lockPanZ;
             public float maxWallHeight;
             public Vector2 verticalAxisLimits;
             public Vector2 radiusLimits;
@@ -105,6 +108,7 @@ namespace Twinny.Mobile.Editor.Camera
             AddProperty(container, serializedObject.FindProperty("_enablePanLimit"), serializedObject);
             AddSlider(container, "_maxPanDistance", 0f, 50f, "Max Pan Dist");
             AddProperty(container, serializedObject.FindProperty("_panTargetMode"), serializedObject);
+            AddPanConstraintToggles(container);
             AddProperty(container, serializedObject.FindProperty("_customPanTarget"), serializedObject);
 
             AddMinMaxSlider(
@@ -258,6 +262,49 @@ namespace Twinny.Mobile.Editor.Camera
             var field = new PropertyField(root);
             field.Bind(owner);
             container.Add(field);
+        }
+
+        private void AddPanConstraintToggles(VisualElement container)
+        {
+            SerializedProperty lockX = serializedObject.FindProperty("_lockPanX");
+            SerializedProperty lockY = serializedObject.FindProperty("_lockPanY");
+            SerializedProperty lockZ = serializedObject.FindProperty("_lockPanZ");
+            if (lockX == null || lockY == null || lockZ == null) return;
+
+            var row = new VisualElement();
+            row.AddToClassList("row");
+
+            var label = new Label("Pan Constraint");
+            label.AddToClassList("row-label");
+
+            var values = new VisualElement();
+            values.AddToClassList("inline-values");
+            values.AddToClassList("axis-toggle-group");
+
+            values.Add(CreateAxisToggle("X", lockX));
+            values.Add(CreateAxisToggle("Y", lockY));
+            values.Add(CreateAxisToggle("Z", lockZ));
+
+            row.Add(label);
+            row.Add(values);
+            container.Add(row);
+        }
+
+        private static VisualElement CreateAxisToggle(string axis, SerializedProperty property)
+        {
+            var wrap = new VisualElement();
+            wrap.AddToClassList("axis-toggle-item");
+
+            var axisLabel = new Label(axis);
+            axisLabel.AddToClassList("axis-toggle-label");
+
+            var toggle = new Toggle();
+            toggle.AddToClassList("axis-toggle");
+            toggle.BindProperty(property);
+
+            wrap.Add(axisLabel);
+            wrap.Add(toggle);
+            return wrap;
         }
 
         private void AddProperty(VisualElement container, SerializedProperty root, string relativeName, SerializedObject owner)
@@ -489,6 +536,9 @@ namespace Twinny.Mobile.Editor.Camera
                 maxPanDistance = GetFloat(handler, "_maxPanDistance"),
                 returnTrackingTargetToOriginOnRelease = GetBool(handler, "_returnTrackingTargetToOriginOnRelease"),
                 panTargetMode = GetInt(handler, "_panTargetMode"),
+                lockPanX = GetBool(handler, "_lockPanX"),
+                lockPanY = GetBool(handler, "_lockPanY"),
+                lockPanZ = GetBool(handler, "_lockPanZ"),
                 maxWallHeight = GetFloat(handler, "_maxWallHeight"),
                 verticalAxisLimits = GetVector2(handler, "_verticalAxisLimits"),
                 radiusLimits = GetVector2(handler, "_radiusLimits"),
@@ -573,6 +623,9 @@ namespace Twinny.Mobile.Editor.Camera
             SetFloat(handlerSo, "_maxPanDistance", payload.maxPanDistance);
             SetBool(handlerSo, "_returnTrackingTargetToOriginOnRelease", payload.returnTrackingTargetToOriginOnRelease);
             SetInt(handlerSo, "_panTargetMode", payload.panTargetMode);
+            SetBool(handlerSo, "_lockPanX", payload.lockPanX);
+            SetBool(handlerSo, "_lockPanY", payload.lockPanY);
+            SetBool(handlerSo, "_lockPanZ", payload.lockPanZ);
             SetFloat(handlerSo, "_maxWallHeight", payload.maxWallHeight);
             SetVector2(handlerSo, "_verticalAxisLimits", payload.verticalAxisLimits);
             SetVector2(handlerSo, "_radiusLimits", payload.radiusLimits);
