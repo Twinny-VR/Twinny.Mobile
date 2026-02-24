@@ -117,7 +117,13 @@ namespace Twinny.Mobile.Camera
         public void OnPrimaryUp(float x, float y) { }
         public void OnSelect(GameObject target) { }
         public void OnSelectHit(RaycastHit hit) { }
-        public void OnCancel() { }
+        public void OnCancel()
+        {
+            // Input providers may cancel when pointer/button state is lost (e.g., releasing outside Game View).
+            // Ensure pan lock state is always cleared so single-finger rotation remains responsive.
+            // Do not restore Hard Look immediately here to avoid a snap/twitch on focus-loss cancel.
+            EndPan(skipReturnToOrigin: true);
+        }
 
         public void OnPrimaryDrag(float dx, float dy)
         {
@@ -327,14 +333,14 @@ namespace Twinny.Mobile.Camera
             SuspendHardLookWhilePanning();
         }
 
-        private void EndPan()
+        private void EndPan(bool skipReturnToOrigin = false)
         {
             if (!_isPanning) return;
             _isPanning = false;
             _hasPanLockAxes = false;
             if (_hardLookRestoreRoutine != null)
                 StopCoroutine(_hardLookRestoreRoutine);
-            if (_returnTrackingTargetToOriginOnRelease && GetTrackingTarget() != null)
+            if (!skipReturnToOrigin && _returnTrackingTargetToOriginOnRelease && GetTrackingTarget() != null)
                 _isReturningPan = true;
         }
 
