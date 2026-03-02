@@ -8,17 +8,17 @@ namespace Twinny.Mobile
         /// <summary>
         /// Called when the user requests immersive mode from the UI.
         /// </summary>
-        void OnImmersiveRequested();
+        void OnImmersiveRequested(string sceneName = "");
 
         /// <summary>
         /// Called when the user requests mockup mode from the UI.
         /// </summary>
-        void OnMockupRequested();
+        void OnMockupRequested(string sceneName = "");
 
         /// <summary>
         /// Called when the user requests to start an experience.
         /// </summary>
-        void OnStartExperienceRequested();
+        void OnStartExperienceRequested(string sceneName = "");
 
 
         /// <summary>

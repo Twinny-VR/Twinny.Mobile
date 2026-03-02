@@ -861,8 +861,9 @@ namespace Twinny.Mobile.Input
             if (Physics.Raycast(ray, out RaycastHit hit))
             {
                 Debug.Log($"[MobileInputProvider] Tap hit {hit.collider.name} at {hit.point}");
-                router.Select(hit.collider.gameObject);
-                CallbackHub.CallAction<IMobileInputCallbacks>(cb => cb.OnSelectHit(hit));
+                SelectionData selection = new SelectionData(hit);
+                router.Select(selection);
+                CallbackHub.CallAction<IMobileInputCallbacks>(cb => cb.OnSelect(selection));
             }
             else
             {

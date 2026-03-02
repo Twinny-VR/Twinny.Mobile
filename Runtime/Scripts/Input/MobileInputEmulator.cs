@@ -14,6 +14,11 @@ namespace Twinny.Mobile.Input
         private const float TwoFingerTapMaxTime = 0.3f;
         private const float MiddlePanSensitivity = 1.0f;
         private const float MiddlePanDeltaThreshold = 1.0f;
+        private const float EmulatorTwoFingerSwipeSensitivity = 10.0f;
+        private const float EmulatorPanDeltaThreshold = 1.0f;
+        private const float ScrollZoomMultiplier = 4.5f;
+        private const float ScrollZoomSmoothing = 20.0f;
+        private const float ScrollZoomEpsilon = 0.0001f;
 
         private MobileInputSettings _settings;
         private bool _warnedMissingSettings;
@@ -50,6 +55,7 @@ namespace Twinny.Mobile.Input
         private bool _mousePinchBlockedByUi;
         private Vector3 _lastMousePinchPos;
         private bool _middlePanDragging;
+        private float _pendingScrollZoom;
 
         private void Awake()
         {
@@ -100,6 +106,7 @@ namespace Twinny.Mobile.Input
             if (HandleTwoFinger()) return;
             if (HandleMiddlePan()) return;
             HandleScroll();
+            ApplySmoothedScrollZoom();
 
             HandleSingleFinger();
         }
@@ -175,17 +182,7 @@ namespace Twinny.Mobile.Input
             }
 
             Vector2 delta = (Vector2)(current - _lastTwoFingerPos);
-            if (delta.sqrMagnitude > 0f)
-            {
-                _twoFingerDragging = true;
-                _suppressTap = true;
-                Vector2 direction = delta.normalized * 10.0f;
-                Vector2 center = current;
-                CallbackHub.CallAction<IMobileInputCallbacks>(
-                    cb => cb.OnTwoFingerSwipe(direction, center)
-                );
-                MobileInputEvents.Drag(direction, center);
-            }
+            EmitTwoFingerPanFromDelta(delta, current, ref _twoFingerDragging);
 
             if (!_twoFingerLongPressDetected &&
                 Time.time - _twoFingerStartTime > _settings.TwoFingerLongPressTime)
@@ -336,17 +333,8 @@ namespace Twinny.Mobile.Input
 
             Vector3 current = UnityEngine.Input.mousePosition;
             Vector2 delta = (Vector2)(current - _lastMousePinchPos);
-            if (delta.sqrMagnitude > MiddlePanDeltaThreshold)
-            {
-                _middlePanDragging = true;
-                _suppressTap = true;
-                Vector2 panDelta = delta * MiddlePanSensitivity;
-                Vector2 center = current;
-                CallbackHub.CallAction<IMobileInputCallbacks>(
-                    cb => cb.OnTwoFingerSwipe(panDelta, center)
-                );
-                MobileInputEvents.Drag(panDelta, center);
-            }
+            Vector2 scaledDelta = delta * MiddlePanSensitivity;
+            EmitTwoFingerPanFromDelta(scaledDelta, current, ref _middlePanDragging, MiddlePanDeltaThreshold);
             _lastMousePinchPos = current;
         }
 
@@ -411,9 +399,12 @@ namespace Twinny.Mobile.Input
                 }
 
                 Vector2 delta = (Vector2)(current - _lastSinglePos);
-                if (delta.sqrMagnitude > _settings.DragThreshold * _settings.DragThreshold)
-                {
+                if (!_singleDragging &&
+                    Vector2.Distance((Vector2)current, (Vector2)_singleStartPos) > _settings.DragThreshold)
                     _singleDragging = true;
+
+                if (_singleDragging && delta.sqrMagnitude > 0.0001f)
+                {
                     _suppressTap = true;
                     router.PrimaryDrag(delta.x, delta.y);
                     MobileInputEvents.Drag(delta, current);
@@ -484,6 +475,25 @@ namespace Twinny.Mobile.Input
             ResetAllStates();
         }
 
+        private void EmitTwoFingerPanFromDelta(
+            Vector2 delta,
+            Vector2 center,
+            ref bool draggingState,
+            float threshold = EmulatorPanDeltaThreshold
+        )
+        {
+            if (delta.sqrMagnitude <= threshold)
+                return;
+
+            draggingState = true;
+            _suppressTap = true;
+            Vector2 panDelta = delta * EmulatorTwoFingerSwipeSensitivity;
+            CallbackHub.CallAction<IMobileInputCallbacks>(
+                cb => cb.OnTwoFingerSwipe(panDelta, center)
+            );
+            MobileInputEvents.Drag(panDelta, center);
+        }
+
         private void OnDisable()
         {
             ResetAllStates();
@@ -551,18 +561,33 @@ namespace Twinny.Mobile.Input
 
         private void HandleScroll()
         {
-            var router = TryGetRouter();
-            if (router == null) return;
-
             if (!_ignoreUiBlocking && IsPointerOverUiAt(UnityEngine.Input.mousePosition))
                 return;
 
             float scroll = UnityEngine.Input.GetAxis("Mouse ScrollWheel");
             if (Mathf.Abs(scroll) <= 0.0001f) return;
 
-            float zoom = scroll * 4.5f;
-            router.Zoom(zoom);
-            MobileInputEvents.PinchZoom(zoom);
+            _pendingScrollZoom += scroll * ScrollZoomMultiplier;
+        }
+
+        private void ApplySmoothedScrollZoom()
+        {
+            if (Mathf.Abs(_pendingScrollZoom) <= ScrollZoomEpsilon)
+            {
+                _pendingScrollZoom = 0f;
+                return;
+            }
+
+            var router = TryGetRouter();
+            if (router == null) return;
+
+            float dt = Mathf.Max(Time.deltaTime, 0.0001f);
+            float alpha = 1f - Mathf.Exp(-ScrollZoomSmoothing * dt);
+            float zoomStep = _pendingScrollZoom * alpha;
+            _pendingScrollZoom -= zoomStep;
+
+            router.Zoom(zoomStep);
+            MobileInputEvents.PinchZoom(zoomStep);
         }
 
         private void TrySelect(Vector3 screenPosition, InputRouter router)
@@ -578,8 +603,9 @@ namespace Twinny.Mobile.Input
             if (Physics.Raycast(ray, out RaycastHit hit))
             {
                 Debug.Log($"[MobileInputEmulator] Click hit {hit.collider.name} at {hit.point}");
-                router.Select(hit.collider.gameObject);
-                CallbackHub.CallAction<IMobileInputCallbacks>(cb => cb.OnSelectHit(hit));
+                SelectionData selection = new SelectionData(hit);
+                router.Select(selection);
+                CallbackHub.CallAction<IMobileInputCallbacks>(cb => cb.OnSelect(selection));
             }
             else
             {

@@ -73,8 +73,7 @@ namespace Twinny.Mobile.Camera
 
         public void OnPrimaryDown(float x, float y) { }
         public void OnPrimaryUp(float x, float y) { }
-        public void OnSelect(GameObject target) { }
-        public void OnSelectHit(RaycastHit hit) { }
+        public void OnSelect(SelectionData selection) { }
         public void OnCancel() { }
         public void OnPrimaryDrag(float dx, float dy) => ApplyRotation(dx, dy);
         public void OnZoom(float delta) => RegisterZoomInput(delta);
@@ -121,11 +120,13 @@ namespace Twinny.Mobile.Camera
         public void OnExitImmersiveMode() => ApplyMode(false);
         public void OnEnterMockupMode() { }
         public void OnExitMockupMode() { }
+        public void OnEnterDemoMode() { }
+        public void OnExitDemoMode() { }
 
         public void OnMaxWallHeightRequested(float height) { }
-        public void OnImmersiveRequested() { }
-        public void OnMockupRequested() { }
-        public void OnStartExperienceRequested() { }
+        public void OnImmersiveRequested(string sceneName) { }
+        public void OnMockupRequested(string sceneName) { }
+        public void OnStartExperienceRequested(string sceneName) { }
         public void OnLoadingProgressChanged(float progress) { }
         public void OnGyroscopeToggled(bool enabled) => _useGyroscope = enabled;
 
@@ -135,11 +136,11 @@ namespace Twinny.Mobile.Camera
             if (_panTilt == null) return;
 
             var horizontal = _panTilt.PanAxis;
-            horizontal.Value += dx * _rotateSpeed;
+            horizontal.Value -= dx * _rotateSpeed;
             _panTilt.PanAxis = horizontal;
 
             var vertical = _panTilt.TiltAxis;
-            float next = vertical.Value - dy * _tiltSpeed;
+            float next = vertical.Value + dy * _tiltSpeed;
             vertical.Value = Mathf.Clamp(next, _verticalAxisLimits.x, _verticalAxisLimits.y);
             _panTilt.TiltAxis = vertical;
         }
@@ -151,7 +152,7 @@ namespace Twinny.Mobile.Camera
             if (_panTilt == null) return;
             if (Twinny.Mobile.Input.MobileInputProvider.CurrentData.TouchCount > 0) return;
 
-            float yawDelta = Mathf.Abs(tiltRotation.y) > _gyroDeadZone ? -tiltRotation.y * _gyroYawSpeed * _gyroScale : 0f;
+            float yawDelta = Mathf.Abs(tiltRotation.y) > _gyroDeadZone ? tiltRotation.y * _gyroYawSpeed * _gyroScale : 0f;
             float pitchDelta = Mathf.Abs(tiltRotation.x) > _gyroDeadZone ? tiltRotation.x * _gyroPitchSpeed * _gyroScale : 0f;
             if (Mathf.Approximately(yawDelta, 0f) && Mathf.Approximately(pitchDelta, 0f)) return;
 
@@ -160,7 +161,7 @@ namespace Twinny.Mobile.Camera
             _panTilt.PanAxis = horizontal;
 
             var vertical = _panTilt.TiltAxis;
-            float next = vertical.Value - pitchDelta;
+            float next = vertical.Value + pitchDelta;
             vertical.Value = Mathf.Clamp(next, _verticalAxisLimits.x, _verticalAxisLimits.y);
             _panTilt.TiltAxis = vertical;
         }

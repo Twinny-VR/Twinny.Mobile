@@ -74,7 +74,7 @@ namespace Twinny.Mobile.Navigation
             }
         }
 
-        public void OnSelectHit(RaycastHit hit)
+        public void OnSelect(SelectionData selection)
         {
             if (!_isModeActive) return;
             if (_agent == null)
@@ -82,9 +82,12 @@ namespace Twinny.Mobile.Navigation
                 Debug.LogWarning("[MobileFpsNavigation] NavMeshAgent is null.");
                 return;
             }
+            if (!selection.HasHit) return;
+
+            RaycastHit hit = selection.Hit;
 
             Debug.Log(
-                $"[MobileFpsNavigation] OnSelectHit {hit.collider.name} at {hit.point} " +
+                $"[MobileFpsNavigation] OnSelect {hit.collider.name} at {hit.point} " +
                 $"(agent enabled={_agent.enabled}, onNavMesh={_agent.isOnNavMesh})"
             );
 
@@ -101,7 +104,6 @@ namespace Twinny.Mobile.Navigation
         public void OnPrimaryDown(float x, float y) { }
         public void OnPrimaryUp(float x, float y) { }
         public void OnPrimaryDrag(float dx, float dy) { }
-        public void OnSelect(GameObject target) { }
         public void OnCancel() { }
         public void OnZoom(float delta) { }
         public void OnTwoFingerTap(Vector2 position) { }
@@ -147,6 +149,8 @@ namespace Twinny.Mobile.Navigation
         public void OnExitImmersiveMode() => _isModeActive = false;
         public void OnEnterMockupMode() { }
         public void OnExitMockupMode() { }
+        public void OnEnterDemoMode() { }
+        public void OnExitDemoMode() { }
 
         private bool IsInteractable(Transform target)
         {

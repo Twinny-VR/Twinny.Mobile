@@ -9,8 +9,6 @@ namespace Twinny.Mobile
 {
     public class TwinnyMobileManager : MonoBehaviour, IMobileUICallbacks
     {
-        private const string MOCKUP_SCENE_NAME = "MobileMockupScene";
-
         private void OnEnable()
         {
             CallbackHub.RegisterCallback<IMobileUICallbacks>(this);
@@ -33,35 +31,37 @@ namespace Twinny.Mobile
         public async Task InitializeAsync()
         {
             StateMachine.ChangeState(new IdleState(this));
-            CallbackHub.CallAction<IMobileUICallbacks>(callback => callback.OnStartExperienceRequested());
-            //await LoadSceneWithProgressAsync(MOCKUP_SCENE_NAME, LoadSceneMode.Additive);
+            CallbackHub.CallAction<IMobileUICallbacks>(callback => callback.OnStartExperienceRequested(TwinnyMobileRuntime.GetDefaultSceneName()));
         }
 
-        public async void OnImmersiveRequested()
+        public async void OnImmersiveRequested(string sceneName = "")
         {
 #if UNITY_WEBGL && !UNITY_EDITOR
             if (!WebGLGyroAPI.IsInitialized)
                 WebGLGyroAPI.RequestGyroPermission();
 #endif
             await CanvasTransition.FadeScreenAsync(true,1f,renderMode:RenderMode.ScreenSpaceOverlay);
+            await EnsureSceneLoadedAsync(sceneName);
             StateMachine.ChangeState(new MobileImmersiveState(this));
-            await CanvasTransition.FadeScreenAsync(false,1f,renderMode:RenderMode.ScreenSpaceOverlay);
+            await CanvasTransition.FadeScreenAsync(false,1f, renderMode:RenderMode.ScreenSpaceOverlay);
 
         }
 
         public void OnMaxWallHeightRequested(float height) { }
 
-        public async void OnMockupRequested()
+        public async void OnMockupRequested(string sceneName = "")
         {
             await CanvasTransition.FadeScreenAsync(true,1f,renderMode:RenderMode.ScreenSpaceOverlay);
+            await EnsureSceneLoadedAsync(sceneName);
             StateMachine.ChangeState(new MobileMockupState(this));
             await CanvasTransition.FadeScreenAsync(false,1f,renderMode:RenderMode.ScreenSpaceOverlay);
 
         }
 
-        public async void OnStartExperienceRequested()
+        public async void OnStartExperienceRequested(string sceneName = "")
         {
-            await StartExperienceSequenceAsync();
+            if (string.IsNullOrEmpty(sceneName)) sceneName = TwinnyMobileRuntime.GetDefaultSceneName();
+            await StartExperienceSequenceAsync(sceneName);
         }
 
         public void OnLoadingProgressChanged(float progress) { }
@@ -93,14 +93,58 @@ namespace Twinny.Mobile
                 CallbackHub.CallAction<ITwinnyMobileCallbacks>(callback => callback.OnSceneLoaded(loadedScene));
             }
 
-            await CanvasTransition.FadeScreenAsync(false, 1f, renderMode: RenderMode.ScreenSpaceOverlay);
+          //  await CanvasTransition.FadeScreenAsync(false, 1f, renderMode: RenderMode.ScreenSpaceOverlay);
+        }
+        public static async Task UnloadAdditiveScenesExceptMainAsync()
+        {
+            for (int index = SceneManager.sceneCount - 1; index >= 0; index--)
+            {
+                Scene scene = SceneManager.GetSceneAt(index);
+                if (!scene.IsValid() || !scene.isLoaded)
+                    continue;
+
+                if (scene.buildIndex == 0)
+                    continue;
+
+                AsyncOperation unloadOperation = SceneManager.UnloadSceneAsync(scene);
+                if (unloadOperation == null)
+                    continue;
+
+                while (!unloadOperation.isDone)
+                    await Task.Yield();
+            }
         }
 
-        private async Task StartExperienceSequenceAsync()
+        private static bool IsSceneLoaded(string sceneName)
         {
-            await LoadSceneWithProgressAsync(MOCKUP_SCENE_NAME, LoadSceneMode.Additive);
+            if (string.IsNullOrWhiteSpace(sceneName))
+                return true;
+
+            Scene scene = SceneManager.GetSceneByName(sceneName);
+            return scene.IsValid() && scene.isLoaded;
+        }
+
+        private static async Task EnsureSceneLoadedAsync(string sceneName)
+        {
+            if (string.IsNullOrWhiteSpace(sceneName))
+            {
+                //await UnloadAdditiveScenesExceptMainAsync();
+                return;
+            }
+
+            if (IsSceneLoaded(sceneName))
+                return;
+
+            await UnloadAdditiveScenesExceptMainAsync();
+            await LoadSceneWithProgressAsync(sceneName, LoadSceneMode.Additive);
+        }
+
+        private async Task StartExperienceSequenceAsync(string sceneName)
+        {
+            await EnsureSceneLoadedAsync(sceneName);
             StateMachine.ChangeState(new MobileMockupState(this));
             CallbackHub.CallAction<ITwinnyMobileCallbacks>(callback => callback.OnExperienceLoaded());
         }
     }
 }
+

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Collections;
 using Concept.Core;
 using Twinny.Core.Input;
+using Twinny.Mobile.Interactables;
 using UnityEngine;
 using Unity.Cinemachine;
 using UnityEngine.SceneManagement;
@@ -36,11 +37,19 @@ namespace Twinny.Mobile.Camera
         [SerializeField] private float _rotateSpeed = 0.1f;
         [SerializeField] private float _tiltSpeed = 0.1f;
         [SerializeField] private bool _returnTrackingTargetToOriginOnRelease = false;
-        [SerializeField] private float _panSpeed = 6f;
+        [SerializeField] private float _panSpeed = 4.2f;
         [SerializeField] private float _panReturnSpeed = 3f;
         [SerializeField] private float _zoomSpeed = 3f;
         [SerializeField] private bool _lockRotationWhileTwoFingerPan = true;
         [SerializeField] private float _hardLookRestoreDelay = 0.08f;
+        [SerializeField] private float _radiusTransitionSpeed = 29.25f;
+        [SerializeField] private float _radiusTransitionEpsilon = 0.01f;
+        [SerializeField] private float _radiusEaseOutDistance = 1.5f;
+        [SerializeField] private float _radiusEaseOutSmoothTime = 0.12f;
+        [SerializeField] private bool _applyFloorRotationOnSelect = false;
+        [SerializeField] private float _rotationTransitionSpeed = 270f;
+        [SerializeField] private float _rotationTransitionEpsilon = 0.2f;
+        [SerializeField] private bool _moveLookAtWithFloorTarget = true;
         [SerializeField] private bool _enablePanLimit;
         [SerializeField] private float _maxPanDistance = 10f;
         [SerializeField] private Vector2 _verticalAxisLimits = new Vector2(-80f, 80f);
@@ -70,6 +79,13 @@ namespace Twinny.Mobile.Camera
         private bool _isHardLookSuspended;
         private Transform _suspendedLookAtTarget;
         private Coroutine _hardLookRestoreRoutine;
+        private Floor _selectedFloor;
+        private bool _isRadiusTransitioning;
+        private float _targetRadius;
+        private float _radiusTransitionVelocity;
+        private bool _isRotationTransitioning;
+        private float _targetHorizontalAxis;
+        private float _targetVerticalAxis;
 
         private struct SuspendedHardLookState
         {
@@ -82,6 +98,8 @@ namespace Twinny.Mobile.Camera
             if (!IsActiveCamera()) return;
             EnforceRotationLockWhilePanning();
             UpdatePanReturn();
+            UpdateRadiusTransition();
+            UpdateRotationTransition();
         }
 
         private void OnEnable()
@@ -115,8 +133,15 @@ namespace Twinny.Mobile.Camera
 
         public void OnPrimaryDown(float x, float y) { }
         public void OnPrimaryUp(float x, float y) { }
-        public void OnSelect(GameObject target) { }
-        public void OnSelectHit(RaycastHit hit) { }
+        public void OnSelect(SelectionData selection)
+        {
+            if (selection.Target == null) return;
+
+            Floor floor = selection.Target.GetComponentInParent<Floor>();
+            if (floor == null) return;
+
+            MoveTrackingTargetToFloor(floor);
+        }
         public void OnCancel()
         {
             // Input providers may cancel when pointer/button state is lost (e.g., releasing outside Game View).
@@ -191,6 +216,8 @@ namespace Twinny.Mobile.Camera
         public void OnExitImmersiveMode() {}
         public void OnEnterMockupMode() => ApplyMode(true);
         public void OnExitMockupMode() => ApplyMode(false);
+        public void OnEnterDemoMode() { }
+        public void OnExitDemoMode() { }
 
         private void ApplyRotation(float dx, float dy)
         {
@@ -198,6 +225,7 @@ namespace Twinny.Mobile.Camera
             if (_orbitalFollow == null) return;
             RestoreHardLookAfterPan();
             if (_lockRotationWhileTwoFingerPan && _isPanning) return;
+            _isRotationTransitioning = false;
 
             var horizontal = _orbitalFollow.HorizontalAxis;
             horizontal.Value += dx * _rotateSpeed;
@@ -344,6 +372,14 @@ namespace Twinny.Mobile.Camera
                 _isReturningPan = true;
         }
 
+        private void ScheduleHardLookRestore()
+        {
+            if (_hardLookRestoreRoutine != null)
+                StopCoroutine(_hardLookRestoreRoutine);
+
+            _hardLookRestoreRoutine = StartCoroutine(RestoreHardLookAfterPanDelayed());
+        }
+
         private IEnumerator RestoreHardLookAfterPanDelayed()
         {
             float delay = Mathf.Max(0f, _hardLookRestoreDelay);
@@ -439,7 +475,9 @@ namespace Twinny.Mobile.Camera
             }
 
             float next = radius - delta * _zoomSpeed;
+            _isRadiusTransitioning = false;
             SetRadius(Mathf.Clamp(next, _radiusLimits.x, _radiusLimits.y));
+            // Test mode: keep HardLook suspended after floor transition.
         }
 
         private Transform GetPanReference()
@@ -544,6 +582,157 @@ namespace Twinny.Mobile.Camera
                 _panReturnVelocity = Vector3.zero;
                 _isReturningPan = false;
             }
+        }
+
+        private void MoveTrackingTargetToFloor(Floor floor)
+        {
+            Transform panTarget = GetTrackingTarget();
+            if (panTarget == null) return;
+            if (floor == null) return;
+
+            if (_selectedFloor != null && _selectedFloor != floor)
+                _selectedFloor.Unselect();
+
+            _isReturningPan = false;
+            _panReturnVelocity = Vector3.zero;
+            _isRotationTransitioning = false;
+
+            Transform lookAtTarget = null;
+            if (_cinemachineCamera != null)
+            {
+                lookAtTarget = _isHardLookSuspended
+                    ? _suspendedLookAtTarget
+                    : _cinemachineCamera.LookAt;
+            }
+
+            SuspendHardLookWhilePanning();
+
+            Vector3 previousPanPosition = panTarget.position;
+            panTarget.position = floor.TargetPosition;
+            Vector3 panDelta = panTarget.position - previousPanPosition;
+
+            // Keep camera relation stable when Follow jumps to a floor anchor.
+            if (_moveLookAtWithFloorTarget)
+            {
+                if (lookAtTarget != null && lookAtTarget != panTarget)
+                    lookAtTarget.position += panDelta;
+            }
+
+            _panOriginPosition = panTarget.position;
+            _initialPanTargetPosition = panTarget.position;
+            _hasInitialPosition = true;
+
+            _selectedFloor = floor;
+            _selectedFloor.Select();
+
+            float clampedRadius = Mathf.Clamp(floor.TargetRadius, _radiusLimits.x, _radiusLimits.y);
+            _targetRadius = clampedRadius;
+            _isRadiusTransitioning = true;
+            _radiusTransitionVelocity = 0f;
+
+            if (_applyFloorRotationOnSelect)
+            {
+                Vector3 targetEuler = floor.TargetRotation.eulerAngles;
+                _targetHorizontalAxis = targetEuler.y;
+                _targetVerticalAxis = Mathf.Clamp(NormalizeSignedAngle(targetEuler.x), _verticalAxisLimits.x, _verticalAxisLimits.y);
+                _isRotationTransitioning = true;
+            }
+            else
+            {
+                _isRotationTransitioning = false;
+            }
+
+            _maxWallHeight = floor.MaxWallHeight;
+            CallbackHub.CallAction<IMobileUICallbacks>(
+                callback => callback.OnMaxWallHeightRequested(_maxWallHeight)
+            );
+        }
+
+        private void UpdateRadiusTransition()
+        {
+            if (!_isRadiusTransitioning) return;
+
+            float currentRadius = GetRadius();
+            if (float.IsNaN(currentRadius))
+            {
+                _isRadiusTransitioning = false;
+                WarnMissingRadiusOnce();
+                return;
+            }
+
+            float remaining = Mathf.Abs(currentRadius - _targetRadius);
+            float nextRadius;
+
+            if (remaining <= Mathf.Max(_radiusEaseOutDistance, _radiusTransitionEpsilon))
+            {
+                float smoothTime = Mathf.Max(0.01f, _radiusEaseOutSmoothTime);
+                nextRadius = Mathf.SmoothDamp(
+                    currentRadius,
+                    _targetRadius,
+                    ref _radiusTransitionVelocity,
+                    smoothTime,
+                    Mathf.Infinity,
+                    Time.deltaTime
+                );
+            }
+            else
+            {
+                float step = Mathf.Max(_radiusTransitionSpeed, 0f) * Time.deltaTime;
+                nextRadius = Mathf.MoveTowards(currentRadius, _targetRadius, step);
+                _radiusTransitionVelocity = 0f;
+            }
+
+            SetRadius(nextRadius);
+
+            if (Mathf.Abs(nextRadius - _targetRadius) <= _radiusTransitionEpsilon)
+            {
+                SetRadius(_targetRadius);
+                _isRadiusTransitioning = false;
+                _radiusTransitionVelocity = 0f;
+                // Test mode: keep HardLook suspended after floor transition.
+            }
+        }
+
+        private void UpdateRotationTransition()
+        {
+            if (!_isRotationTransitioning) return;
+            if (_orbitalFollow == null)
+            {
+                _isRotationTransitioning = false;
+                return;
+            }
+
+            float step = Mathf.Max(_rotationTransitionSpeed, 0f) * Time.deltaTime;
+
+            var horizontal = _orbitalFollow.HorizontalAxis;
+            var vertical = _orbitalFollow.VerticalAxis;
+
+            float nextHorizontal = Mathf.MoveTowardsAngle(horizontal.Value, _targetHorizontalAxis, step);
+            float nextVertical = Mathf.MoveTowards(vertical.Value, _targetVerticalAxis, step);
+
+            horizontal.Value = nextHorizontal;
+            vertical.Value = nextVertical;
+            _orbitalFollow.HorizontalAxis = horizontal;
+            _orbitalFollow.VerticalAxis = vertical;
+
+            bool horizontalDone = Mathf.Abs(Mathf.DeltaAngle(nextHorizontal, _targetHorizontalAxis)) <= _rotationTransitionEpsilon;
+            bool verticalDone = Mathf.Abs(nextVertical - _targetVerticalAxis) <= _rotationTransitionEpsilon;
+
+            if (horizontalDone && verticalDone)
+            {
+                horizontal.Value = _targetHorizontalAxis;
+                vertical.Value = _targetVerticalAxis;
+                _orbitalFollow.HorizontalAxis = horizontal;
+                _orbitalFollow.VerticalAxis = vertical;
+                _isRotationTransitioning = false;
+                // Test mode: keep HardLook suspended after floor transition.
+            }
+        }
+
+        private static float NormalizeSignedAngle(float angle)
+        {
+            if (angle > 180f) angle -= 360f;
+            return angle;
         }
 
         private Transform GetPanTarget()

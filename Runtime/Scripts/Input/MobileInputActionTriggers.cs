@@ -1,4 +1,5 @@
 using Concept.Core;
+using Twinny.Core.Input;
 using UnityEngine;
 using UnityEngine.Events;
 using System.Collections.Generic;
@@ -100,12 +101,7 @@ namespace Twinny.Mobile.Input
             TriggerAction(InputAction.ActionType.PrimaryDrag);
         }
 
-        public void OnSelect(GameObject target)
-        {
-            TriggerAction(InputAction.ActionType.Select);
-        }
-
-        public void OnSelectHit(RaycastHit hit)
+        public void OnSelect(SelectionData selection)
         {
             TriggerAction(InputAction.ActionType.Select);
         }

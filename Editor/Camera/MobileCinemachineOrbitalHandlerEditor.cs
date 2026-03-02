@@ -13,8 +13,8 @@ namespace Twinny.Mobile.Editor.Camera
     [CustomEditor(typeof(MobileCinemachineOrbitalHandler))]
     public class MobileCinemachineOrbitalHandlerEditor : UnityEditor.Editor
     {
-        private const string UxmlPath = "Packages/com.twinny.mobile/Editor/Camera/MobileCinemachineOrbitalHandlerEditor.uxml";
-        private const string UssPath = "Packages/com.twinny.mobile/Editor/Camera/MobileCinemachineOrbitalHandlerEditor.uss";
+        private const string UxmlPath = "Packages/com.twinny.twe26/Editor/Shared/MobileCinemachineSharedEditor.uxml";
+        private const string UssPath = "Packages/com.twinny.twe26/Editor/Shared/MobileCinemachineSharedEditor.uss";
         private const string IconsPath = "Packages/com.twinny.mobile/Editor/Camera/Icons/icons.png";
         private const string OrbitalIconName = "icons_0";
         private const string TitleFontPath = "Packages/com.twinny.twe26/Editor/SetupGuide/Resources/Fonts/DINNextLTPro-Condensed.otf";
@@ -99,9 +99,12 @@ namespace Twinny.Mobile.Editor.Camera
             AddSlider(container, "_tiltSpeed", 0f, 2f, "Tilt Speed");
             AddProperty(container, serializedObject.FindProperty("_activePriority"), serializedObject);
             AddProperty(container, serializedObject.FindProperty("_inactivePriority"), serializedObject);
-            AddSlider(container, "_panSpeed", 0f, 10f, "Pan Speed");
+            AddSlider(container, "_panSpeed", 0f, 10f, "Target Move Speed");
             AddSlider(container, "_panReturnSpeed", 0f, 20f, "Pan Return Speed");
             AddSlider(container, "_zoomSpeed", 0f, 10f, "Zoom Speed");
+            AddSlider(container, "_radiusTransitionSpeed", 0f, 80f, "Radius Transition Speed");
+            AddSlider(container, "_radiusEaseOutDistance", 0f, 10f, "Radius Ease-Out Dist");
+            AddSlider(container, "_radiusEaseOutSmoothTime", 0.01f, 1f, "Radius Ease-Out Time");
             AddSlider(container, "_hardLookRestoreDelay", 0f, 0.5f, "HardLook Restore Delay");
 
             AddProperty(container, serializedObject.FindProperty("_returnTrackingTargetToOriginOnRelease"), serializedObject);

@@ -11,12 +11,6 @@ namespace Twinny.Mobile
     {
         #region Core Extensions
 
-        /// <summary>
-        /// Triggered when a tap hits a world collider.
-        /// </summary>
-        /// <param name="hit">Raycast hit information.</param>
-        void OnSelectHit(RaycastHit hit);
-
         #endregion
 
         #region Multitouch Gestures

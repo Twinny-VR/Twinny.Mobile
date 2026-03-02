@@ -10,19 +10,20 @@
                     <ui:Slider name="CutoffSlider" direction="Vertical" low-value="0.0" high-value="1.0" value="0.0" class="cutoff-slider" style="background-color: rgba(0, 0, 0, 0); border-width: 0; display: none;"/>
                 </ui:VisualElement>
                 <ui:VisualElement name="BottomBar" picking-mode="Ignore" class="bottom-bar">
+                    <ui:Button text="" name="HomeButton" class="icon-button mockup-button" style="display: none; background-image: url(&quot;project://database/Packages/com.twinny.mobile/Samples/SceneTemplates/MobileStartScene/Sprites/HomeIcon.png?fileID=21300000&amp;guid=97676ee0d4dc8d748bb85febc0830a2e&amp;type=3#HomeIcon&quot;); background-size: 64% 64%;"/>
                     <ui:Button text="Gyro On" name="GyroToggleButton" class="gyro-toggle-button" style="display: none;"/>
                     <ui:Button text="" name="ImmersiveButton" class="icon-button immersive-button" style="display: none;"/>
                     <ui:Button text="" name="MockupButton" class="icon-button mockup-button"/>
                 </ui:VisualElement>
             </ui:VisualElement>
         </ui:VisualElement>
-        <ui:VisualElement name="InjectedContentRoot" class="injected-content-root"/>
-        <ui:VisualElement name="SceneOverlayRoot" class="scene-overlay-root"/>
+        <ui:VisualElement name="InjectedContentRoot" picking-mode="Ignore" class="injected-content-root"/>
+        <ui:VisualElement name="SceneOverlayRoot" picking-mode="Ignore" class="scene-overlay-root"/>
         <ui:VisualElement name="LoadingOverlayRoot" class="loading-overlay" style="display: none;">
             <ui:VisualElement name="LoadingBar" class="loading-bar">
                 <ui:VisualElement name="LoadingBarFill" class="loading-bar-fill"/>
             </ui:VisualElement>
         </ui:VisualElement>
-        <ui:VisualElement name="ModalOverlayRoot" class="modal-overlay-root"/>
+        <ui:VisualElement name="ModalOverlayRoot" class="modal-overlay-root" style="display: none;"/>
     </ui:VisualElement>
 </ui:UXML>

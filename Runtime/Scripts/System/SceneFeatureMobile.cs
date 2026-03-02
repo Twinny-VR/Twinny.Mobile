@@ -125,6 +125,8 @@ namespace Twinny.Mobile
             throw new System.NotImplementedException();
         }
         public void OnExitMockupMode() { }
+        public void OnEnterDemoMode() { }
+        public void OnExitDemoMode() { }
 
         public void OnTeleportToLandMark(int landMarkIndex)
         {

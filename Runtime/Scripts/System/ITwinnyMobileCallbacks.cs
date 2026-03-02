@@ -45,5 +45,11 @@ namespace Twinny.Mobile
         /// </summary>
         void OnEnterMockupMode();
         void OnExitMockupMode();
+
+        /// <summary>
+        /// Called when automatic camera demo mode becomes active/inactive.
+        /// </summary>
+        void OnEnterDemoMode();
+        void OnExitDemoMode();
     }
 }
