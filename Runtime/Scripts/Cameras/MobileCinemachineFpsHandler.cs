@@ -4,7 +4,7 @@ using Unity.Cinemachine;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
-namespace Twinny.Mobile.Camera
+namespace Twinny.Mobile.Cameras
 {
     /// <summary>
     /// Mobile input bridge for Cinemachine Pan Tilt-based FPS cameras.

@@ -58,13 +58,18 @@ namespace Twinny.Mobile.Editor.Interactables
         private void AddIdentityFields(VisualElement container)
         {
             if (container == null) return;
-            AddProperty(container, serializedObject.FindProperty("_name"), serializedObject);
-            AddProperty(container, serializedObject.FindProperty("_number"), serializedObject);
+            SerializedProperty dataProp = serializedObject.FindProperty("_data");
+            if (dataProp == null) return;
 
-            SerializedProperty immersionSceneProp = serializedObject.FindProperty("_immersionSceneName");
+            SerializedProperty nameProp = dataProp.FindPropertyRelative("<Name>k__BackingField");
+            SerializedProperty numberProp = dataProp.FindPropertyRelative("<Number>k__BackingField");
+            SerializedProperty immersionSceneProp = dataProp.FindPropertyRelative("<ImmersionSceneName>k__BackingField");
+            SerializedProperty sceneOpenModeProp = dataProp.FindPropertyRelative("<SceneOpenMode>k__BackingField");
+
+            AddProperty(container, nameProp, serializedObject);
+            AddProperty(container, numberProp, serializedObject);
             AddProperty(container, immersionSceneProp, serializedObject);
 
-            SerializedProperty sceneOpenModeProp = serializedObject.FindProperty("_sceneOpenMode");
             if (sceneOpenModeProp != null)
             {
                 var sceneOpenModeField = new PropertyField(sceneOpenModeProp);

@@ -4,7 +4,7 @@ using Twinny.Mobile;
 using Unity.Cinemachine;
 using UnityEngine;
 
-namespace Twinny.Mobile.Camera
+namespace Twinny.Mobile.Cameras
 {
     /// <summary>
     /// Starts a lightweight camera demo when the user is idle and stops it on interaction.

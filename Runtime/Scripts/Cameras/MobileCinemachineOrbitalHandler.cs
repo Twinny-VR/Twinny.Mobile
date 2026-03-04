@@ -8,7 +8,7 @@ using UnityEngine;
 using Unity.Cinemachine;
 using UnityEngine.SceneManagement;
 
-namespace Twinny.Mobile.Camera
+namespace Twinny.Mobile.Cameras
 {
     /// <summary>
     /// Editor/mobile input bridge for Cinemachine Orbital Follow + Hard Look At setups.
@@ -17,6 +17,10 @@ namespace Twinny.Mobile.Camera
     [RequireComponent(typeof(CinemachineOrbitalFollow))]
     public class MobileCinemachineOrbitalHandler : MonoBehaviour, IMobileInputCallbacks, ITwinnyMobileCallbacks
     {
+        private static int s_activeInstanceCount;
+
+        public static bool HasActiveInstance => s_activeInstanceCount > 0;
+
         public enum PanTargetMode
         {
             CameraTransform,
@@ -104,6 +108,7 @@ namespace Twinny.Mobile.Camera
 
         private void OnEnable()
         {
+            s_activeInstanceCount++;
             EnsureReferences();
             CacheOrbitalMembers();
             InitializePanLimit();
@@ -114,6 +119,7 @@ namespace Twinny.Mobile.Camera
 
         private void OnDisable()
         {
+            s_activeInstanceCount = Mathf.Max(0, s_activeInstanceCount - 1);
             if (_hardLookRestoreRoutine != null)
             {
                 StopCoroutine(_hardLookRestoreRoutine);

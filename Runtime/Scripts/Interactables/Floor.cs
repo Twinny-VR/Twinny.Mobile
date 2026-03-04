@@ -4,6 +4,18 @@ using UnityEngine.Events;
 
 namespace Twinny.Mobile.Interactables
 {
+    [Serializable]
+    public class FloorData
+    {
+        [Header("Identity")]
+        [field: SerializeField] public string Name { get; set; } = "Floor";
+        [field: SerializeField] public int Number { get; set; }
+        [field: SerializeField] public string ImmersionSceneName { get; set; }
+        public bool HasImmersionScene => !string.IsNullOrWhiteSpace(ImmersionSceneName);
+
+        [field: SerializeField] public Floor.FloorSceneOpenMode SceneOpenMode { get; set; } = Floor.FloorSceneOpenMode.Immersive;
+    }
+
     /// <summary>
     /// Represents a selectable floor/area with camera target metadata and selection events.
     /// </summary>
@@ -19,10 +31,7 @@ namespace Twinny.Mobile.Interactables
         public static event Action<Floor> Unselected;
 
         [Header("Identity")]
-        [SerializeField] private string _name = "Floor";
-        [SerializeField] private int _number;
-        [SerializeField] private string _immersionSceneName;
-        [SerializeField] private FloorSceneOpenMode _sceneOpenMode = FloorSceneOpenMode.Immersive;
+        [SerializeField] private FloorData _data = new();
 
         [Header("Camera Target")]
         [SerializeField] private bool _useFocusPoint = true;
@@ -36,11 +45,6 @@ namespace Twinny.Mobile.Interactables
         [SerializeField] private UnityEvent _onSelect;
         [SerializeField] private UnityEvent _onUnselect;
 
-        public string Name => _name;
-        public int Number => _number;
-        public string ImmersionSceneName => _immersionSceneName;
-        public bool HasImmersionScene => !string.IsNullOrWhiteSpace(_immersionSceneName);
-        public FloorSceneOpenMode SceneOpenMode => _sceneOpenMode;
         public bool UseFocusPoint => _useFocusPoint;
         public Transform FocusPoint => _focusPoint != null ? _focusPoint : transform;
         public float TargetRadius => _targetRadius;
@@ -51,6 +55,8 @@ namespace Twinny.Mobile.Interactables
         public Transform TargetTransform => _useFocusPoint && _focusPoint != null ? _focusPoint : transform;
         public Vector3 TargetPosition => TargetTransform.position + _targetPositionOffset;
         public Quaternion TargetRotation => TargetTransform.rotation * Quaternion.Euler(_targetRotationOffset);
+
+        public FloorData Data => _data ??= new FloorData();
 
         public void Select()
         {

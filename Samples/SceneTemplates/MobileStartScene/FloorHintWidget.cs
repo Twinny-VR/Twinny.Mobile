@@ -66,10 +66,10 @@ namespace Twinny.Mobile.Samples
                 return;
             }
 
-            string floorName = string.IsNullOrWhiteSpace(floor.Name) ? "Floor" : floor.Name;
-            string floorNumber = $"{floor.Number}º Andar";
-            bool useMockupIcon = floor.SceneOpenMode == Floor.FloorSceneOpenMode.Mockup;
-            SetInfo(floorName, floorNumber, floor.HasImmersionScene, useMockupIcon);
+            string floorName = string.IsNullOrWhiteSpace(floor.Data.Name) ? "Floor" : floor.Data.Name;
+            string floorNumber = $"{floor.Data.Number}º Andar";
+            bool useMockupIcon = floor.Data.SceneOpenMode == Floor.FloorSceneOpenMode.Mockup;
+            SetInfo(floorName, floorNumber, floor.Data.HasImmersionScene, useMockupIcon);
         }
 
         public void SetInfo(string title, string subtitle, bool hasImmersion, bool useMockupIcon)

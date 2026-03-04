@@ -1,5 +1,5 @@
 using System.Collections.Generic;
-using Twinny.Mobile.Camera;
+using Twinny.Mobile.Cameras;
 using Unity.Cinemachine;
 using UnityEditor;
 using UnityEditor.SceneManagement;

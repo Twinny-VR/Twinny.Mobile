@@ -1,7 +1,7 @@
 using Concept.Core;
-using Twinny.Core;
+using System.Collections.Generic;
+using System.Linq;
 using Twinny.Core.Input;
-using Twinny.Mobile;
 using Twinny.Mobile.Interactables;
 using Twinny.Mobile.Navigation;
 using Twinny.Shaders;
@@ -14,10 +14,9 @@ namespace Twinny.Mobile.Samples
     public class MainInterface : MonoBehaviour, IMobileUICallbacks, ITwinnyMobileCallbacks, IMobileInputCallbacks
     {
         private const string StartButtonName = "StartButton";
-        private const string HomeButtonName = "HomeButton";
-        private const string ImmersiveButtonName = "ImmersiveButton";
-        private const string MockupButtonName = "MockupButton";
         private const string GyroToggleButtonName = "GyroToggleButton";
+        private const string ModeToggleRowName = "ModeToggleRow";
+        private const string ModeToggleName = "ModeToggle";
         private const string MainUiName = "MainUI";
         private const string ExperienceUiName = "ExperienceUI";
         private const string GlobalUiRootName = "GlobalUIRoot";
@@ -25,22 +24,29 @@ namespace Twinny.Mobile.Samples
         private const string LoadingOverlayRootName = "LoadingOverlayRoot";
         private const string LoadingBarFillName = "LoadingBarFill";
         private const string CutoffSliderName = "CutoffSlider";
+        private const string LevelSelectorName = "LevelSelector";
+        private const string LevelSelectorButtonName = "LevelSelectorButton";
+        private const string LevelSelectorMenuName = "LevelSelectorMenu";
+        private const string LevelSelectorOptionClassName = "level-selector-option";
+        private const string LevelSelectorOptionIsLastClassName = "is-last";
+        private const string ModeToggleOnClassName = "mode-toggle--on";
+        private const string ModeToggleOffClassName = "mode-toggle--off";
         private const string InjectedContentRootName = "InjectedContentRoot";
         private const string FloorHintRootName = "FloorHintRoot";
         private const float LoadingSortingOrder = 1000f;
 
 
         [SerializeField] private UIDocument _document;
+        [SerializeField] private List<FloorData> _floorsData = new();
         [SerializeField] private float _floorHintScreenPadding = 16f;
         private float _defaultSortingOrder;
         private bool _hasDefaultSortingOrder;
         private float _defaultPanelSortingOrder;
         private bool _hasDefaultPanelSortingOrder;
         private Button _startButton;
-        private Button _immersiveButton;
-        private Button _mockupButton;
-        private Button _homeButton;
         private Button _gyroToggleButton;
+        private VisualElement _modeToggleRow;
+        private Toggle _modeToggle;
         private VisualElement _mainUi;
         private VisualElement _experienceUi;
         private VisualElement _globalUiRoot;
@@ -48,6 +54,10 @@ namespace Twinny.Mobile.Samples
         private VisualElement _loadingOverlayRoot;
         private VisualElement _loadingBarFill;
         private VisualElement _injectedContentRoot;
+        private VisualElement _levelSelector;
+        private VisualElement _levelSelectorMenu;
+        private Button _levelSelectorButton;
+        private readonly List<Button> _levelSelectorOptionButtons = new();
         private FloorHintWidget _floorHintWidget;
         private Slider _cutoffSlider;
         private Floor _selectedFloor;
@@ -55,9 +65,6 @@ namespace Twinny.Mobile.Samples
         private int _cutoffPointerId = -1;
         private bool _warnedMissingRoot;
         private bool _warnedMissingStart;
-        private bool _warnedMissingImmersive;
-        private bool _warnedMissingMockup;
-        private bool _warnedMissingHome;
         private bool _warnedMissingGyroToggle;
         private bool _warnedMissingMainUi;
         private bool _warnedMissingExperienceUi;
@@ -124,10 +131,9 @@ namespace Twinny.Mobile.Samples
 
             var root = _document.rootVisualElement;
             _startButton = root.Q<Button>(StartButtonName);
-            _immersiveButton = root.Q<Button>(ImmersiveButtonName);
-            _mockupButton = root.Q<Button>(MockupButtonName);
-            _homeButton = root.Q<Button>(HomeButtonName);
             _gyroToggleButton = root.Q<Button>(GyroToggleButtonName);
+            _modeToggleRow = root.Q<VisualElement>(ModeToggleRowName);
+            _modeToggle = _modeToggleRow?.Q<Toggle>(ModeToggleName);
             _mainUi = root.Q<VisualElement>(MainUiName);
             _experienceUi = root.Q<VisualElement>(ExperienceUiName);
             _globalUiRoot = root.Q<VisualElement>(GlobalUiRootName);
@@ -136,11 +142,12 @@ namespace Twinny.Mobile.Samples
             _loadingBarFill = root.Q<VisualElement>(LoadingBarFillName);
             _cutoffSlider = root.Q<Slider>(CutoffSliderName);
             _injectedContentRoot = root.Q<VisualElement>(InjectedContentRootName);
+            _levelSelector = root.Q<VisualElement>(LevelSelectorName);
+            _levelSelectorButton = root.Q<Button>(LevelSelectorButtonName);
+            _levelSelectorMenu = root.Q<VisualElement>(LevelSelectorMenuName);
+            PopulateLevelSelectorMenu();
 
             if (_startButton == null) WarnMissingStart();
-            if (_immersiveButton == null) WarnMissingImmersive();
-            if (_mockupButton == null) WarnMissingMockup();
-            if (_homeButton == null) WarnMissingHome();
             if (_gyroToggleButton == null) WarnMissingGyroToggle();
             if (_mainUi == null) WarnMissingMainUi();
             if (_experienceUi == null) WarnMissingExperienceUi();
@@ -161,10 +168,13 @@ namespace Twinny.Mobile.Samples
             if (_loadingBarFill != null)
                 _loadingBarFill.style.width = Length.Percent(0f);
 
+            if (_levelSelectorMenu != null)
+                _levelSelectorMenu.style.display = DisplayStyle.None;
+            SetLevelSelectorOpenState(false);
+
             // Initialize mode UI before first callback to avoid one-frame button flicker.
             _isMockupMode = true;
             ApplyModeButtons();
-            UpdateHomeButtonVisibility(TwinnyMobileRuntime.GetDefaultSceneName());
         }
 
         private void HandleFloorSelected(Floor floor)
@@ -212,7 +222,6 @@ namespace Twinny.Mobile.Samples
                 SetFloorHintVisibility(false);
                 return;
             }
-
             Camera cam = Camera.main;
             if (cam == null) cam = FindAnyObjectByType<Camera>();
             if (cam == null) return;
@@ -257,19 +266,30 @@ namespace Twinny.Mobile.Samples
         private void HandleFloorHintClicked()
         {
             if (_selectedFloor == null) return;
-            if (!_selectedFloor.HasImmersionScene) return;
+            
+        
+            if (!_selectedFloor.Data.HasImmersionScene) return;
 
             Floor selectedFloor = _selectedFloor;
             HandleFloorUnselected(selectedFloor);
             SetFloorHintVisibility(false);
-            Debug.Log($"[MainInterface] Floor hint clicked: {selectedFloor.ImmersionSceneName}");
+            Debug.Log($"[MainInterface] Floor hint clicked: {selectedFloor.Data.ImmersionSceneName}");
+            SceneRequest(selectedFloor.Data);
+        }
+
+        private void SceneRequest(FloorData data)
+        {
+            if (data == null || string.IsNullOrWhiteSpace(data.ImmersionSceneName))
+                return;
+
             CallbackHub.CallAction<IMobileUICallbacks>(callback =>
             {
-                if (selectedFloor.SceneOpenMode == Floor.FloorSceneOpenMode.Mockup)
-                    callback.OnMockupRequested(selectedFloor.ImmersionSceneName);
+                if (data.SceneOpenMode == Floor.FloorSceneOpenMode.Mockup)
+                    callback.OnMockupRequested(data.ImmersionSceneName);
                 else
-                    callback.OnImmersiveRequested(selectedFloor.ImmersionSceneName);
+                    callback.OnImmersiveRequested(data.ImmersionSceneName);
             });
+
         }
 
         private void RegisterCallbacks()
@@ -277,17 +297,10 @@ namespace Twinny.Mobile.Samples
             if (_startButton != null)
                 _startButton.clicked += HandleStartClicked;
 
-            if (_immersiveButton != null)
-                _immersiveButton.clicked += HandleImmersiveClicked;
-
-            if (_mockupButton != null)
-                _mockupButton.clicked += HandleMockupClicked;
-
-            if (_homeButton != null)
-                _homeButton.clicked += HandleHomeClicked;
-
             if (_gyroToggleButton != null)
                 _gyroToggleButton.clicked += HandleGyroToggleClicked;
+            if (_modeToggle != null)
+                _modeToggle.RegisterValueChangedCallback(HandleModeToggleChanged);
 
             if (_cutoffSlider != null)
                 _cutoffSlider.RegisterValueChangedCallback(HandleCutoffChanged);
@@ -299,6 +312,12 @@ namespace Twinny.Mobile.Samples
                 _cutoffSlider.RegisterCallback<PointerUpEvent>(HandleCutoffPointerUp, TrickleDown.TrickleDown);
                 _cutoffSlider.RegisterCallback<PointerCancelEvent>(HandleCutoffPointerCancel, TrickleDown.TrickleDown);
             }
+
+            if (_levelSelectorButton != null)
+                _levelSelectorButton.clicked += HandleLevelSelectorButtonClicked;
+
+            if (_document?.rootVisualElement != null)
+                _document.rootVisualElement.RegisterCallback<PointerDownEvent>(HandleRootPointerDown, TrickleDown.TrickleDown);
         }
 
         private void UnregisterCallbacks()
@@ -306,17 +325,10 @@ namespace Twinny.Mobile.Samples
             if (_startButton != null)
                 _startButton.clicked -= HandleStartClicked;
 
-            if (_immersiveButton != null)
-                _immersiveButton.clicked -= HandleImmersiveClicked;
-
-            if (_mockupButton != null)
-                _mockupButton.clicked -= HandleMockupClicked;
-
-            if (_homeButton != null)
-                _homeButton.clicked -= HandleHomeClicked;
-
             if (_gyroToggleButton != null)
                 _gyroToggleButton.clicked -= HandleGyroToggleClicked;
+            if (_modeToggle != null)
+                _modeToggle.UnregisterValueChangedCallback(HandleModeToggleChanged);
 
             if (_cutoffSlider != null)
                 _cutoffSlider.UnregisterValueChangedCallback(HandleCutoffChanged);
@@ -329,6 +341,129 @@ namespace Twinny.Mobile.Samples
                 _cutoffSlider.UnregisterCallback<PointerCancelEvent>(HandleCutoffPointerCancel, TrickleDown.TrickleDown);
                 ReleaseCutoffPointer();
             }
+
+            if (_levelSelectorButton != null)
+                _levelSelectorButton.clicked -= HandleLevelSelectorButtonClicked;
+
+            if (_document?.rootVisualElement != null)
+                _document.rootVisualElement.UnregisterCallback<PointerDownEvent>(HandleRootPointerDown, TrickleDown.TrickleDown);
+        }
+
+        private void HandleLevelSelectorButtonClicked()
+        {
+            if (_levelSelectorMenu == null)
+                return;
+
+            bool isOpening = _levelSelectorMenu.style.display != DisplayStyle.Flex;
+            _levelSelectorMenu.style.display = isOpening ? DisplayStyle.Flex : DisplayStyle.None;
+            SetLevelSelectorOpenState(isOpening);
+        }
+
+        private void HandleLevelSelectorOptionClicked(FloorData floorData)
+        {
+            if (floorData == null)
+                return;
+
+            string value = floorData.Name?.Trim();
+            if (_levelSelectorButton != null)
+                _levelSelectorButton.text = value;
+
+            if (_levelSelectorMenu != null)
+                _levelSelectorMenu.style.display = DisplayStyle.None;
+
+            SetLevelSelectorOpenState(false);
+            SceneRequest(floorData);
+        }
+
+        private void HandleRootPointerDown(PointerDownEvent evt)
+        {
+            if (_levelSelector == null || _levelSelectorMenu == null)
+                return;
+
+            if (_levelSelectorMenu.style.display != DisplayStyle.Flex)
+                return;
+
+            if (_levelSelector.worldBound.Contains(evt.position))
+                return;
+
+            if (_levelSelectorMenu.worldBound.Contains(evt.position))
+                return;
+
+            _levelSelectorMenu.style.display = DisplayStyle.None;
+            SetLevelSelectorOpenState(false);
+        }
+
+        private void SetLevelSelectorOpenState(bool isOpen)
+        {
+            if (_levelSelector == null)
+                return;
+
+            if (isOpen)
+                _levelSelector.AddToClassList("is-open");
+            else
+                _levelSelector.RemoveFromClassList("is-open");
+        }
+
+        private void PopulateLevelSelectorMenu()
+        {
+            if (_levelSelectorMenu == null)
+                return;
+
+            _levelSelectorMenu.Clear();
+            _levelSelectorOptionButtons.Clear();
+
+            List<FloorData> validFloors = _floorsData
+                .Where(floor => floor != null && !string.IsNullOrWhiteSpace(floor.Name))
+                .ToList();
+
+            if (validFloors.Count == 0)
+            {
+                if (_levelSelectorButton != null)
+                    _levelSelectorButton.text = "Sem pisos";
+                return;
+            }
+
+            for (int i = 0; i < validFloors.Count; i++)
+            {
+                FloorData floor = validFloors[i];
+                string floorName = floor.Name.Trim();
+                var optionButton = new Button(() => HandleLevelSelectorOptionClicked(floor))
+                {
+                    text = floorName
+                };
+
+                optionButton.AddToClassList(LevelSelectorOptionClassName);
+                if (i == validFloors.Count - 1)
+                    optionButton.AddToClassList(LevelSelectorOptionIsLastClassName);
+                _levelSelectorMenu.Add(optionButton);
+                _levelSelectorOptionButtons.Add(optionButton);
+            }
+
+            if (_levelSelectorButton != null)
+                _levelSelectorButton.text = validFloors[0].Name.Trim();
+        }
+
+        private void SyncLevelSelectorWithLoadedScene(string loadedSceneName)
+        {
+            if (_levelSelectorButton == null)
+                return;
+
+            if (string.IsNullOrWhiteSpace(loadedSceneName))
+                return;
+
+            FloorData matchedFloor = _floorsData.FirstOrDefault(floor =>
+                floor != null &&
+                !string.IsNullOrWhiteSpace(floor.ImmersionSceneName) &&
+                string.Equals(
+                    floor.ImmersionSceneName.Trim(),
+                    loadedSceneName,
+                    System.StringComparison.OrdinalIgnoreCase
+                ));
+
+            if (matchedFloor == null || string.IsNullOrWhiteSpace(matchedFloor.Name))
+                return;
+
+            _levelSelectorButton.text = matchedFloor.Name.Trim();
         }
 
         private void HandleStartClicked()
@@ -336,20 +471,14 @@ namespace Twinny.Mobile.Samples
             CallbackHub.CallAction<IMobileUICallbacks>(callback => callback.OnStartExperienceRequested(TwinnyMobileRuntime.GetDefaultSceneName()));
         }
 
-        private void HandleImmersiveClicked()
+        private void HandleModeToggleChanged(ChangeEvent<bool> evt)
         {
-            CallbackHub.CallAction<IMobileUICallbacks>(callback => callback.OnImmersiveRequested());
-        }
+            UpdateModeToggleVisualState(evt.newValue);
 
-        private void HandleMockupClicked()
-        {
-            CallbackHub.CallAction<IMobileUICallbacks>(callback => callback.OnMockupRequested());
-        }
-
-        private void HandleHomeClicked()
-        {
-            UpdateHomeButtonVisibility(TwinnyMobileRuntime.GetDefaultSceneName());
-            CallbackHub.CallAction<IMobileUICallbacks>(callback => callback.OnStartExperienceRequested());
+            if (evt.newValue)
+                CallbackHub.CallAction<IMobileUICallbacks>(callback => callback.OnImmersiveRequested());
+            else
+                CallbackHub.CallAction<IMobileUICallbacks>(callback => callback.OnMockupRequested());
         }
 
         private void HandleGyroToggleClicked()
@@ -525,7 +654,7 @@ namespace Twinny.Mobile.Samples
                 _loadingOverlayRoot.style.display = DisplayStyle.None;
 
             RestoreSortingOrder();
-            UpdateHomeButtonVisibility(scene.name);
+            SyncLevelSelectorWithLoadedScene(scene.name);
             ApplyModeButtons();
         }
         public void OnTeleportToLandMark(int landMarkIndex) { }
@@ -602,32 +731,11 @@ namespace Twinny.Mobile.Samples
             Debug.LogWarning("[MainInterface] UIDocument or rootVisualElement not found.");
         }
 
-        private void WarnMissingImmersive()
-        {
-            if (_warnedMissingImmersive) return;
-            _warnedMissingImmersive = true;
-            Debug.LogWarning("[MainInterface] ImmersiveButton not found in UXML.");
-        }
-
         private void WarnMissingStart()
         {
             if (_warnedMissingStart) return;
             _warnedMissingStart = true;
             Debug.LogWarning("[MainInterface] StartButton not found in UXML.");
-        }
-
-        private void WarnMissingMockup()
-        {
-            if (_warnedMissingMockup) return;
-            _warnedMissingMockup = true;
-            Debug.LogWarning("[MainInterface] MockupButton not found in UXML.");
-        }
-
-        private void WarnMissingHome()
-        {
-            if (_warnedMissingHome) return;
-            _warnedMissingHome = true;
-            Debug.LogWarning("[MainInterface] HomeButton not found in UXML.");
         }
 
         private void WarnMissingGyroToggle()
@@ -687,20 +795,60 @@ namespace Twinny.Mobile.Samples
 
         private void ApplyModeButtons()
         {
-            bool canShowFpsControls = _isMockupMode && MobileFpsNavigation.HasActiveInstance;
+            bool canShowMockupControls = HasActiveOrbitalHandlerInstance() && MobileFpsNavigation.HasActiveInstance;
             bool canShowAlphaSlider = _isMockupMode && AlphaClipper.HasActiveInstance;
-            bool canShowGyroToggle = canShowFpsControls && IsMobileWebGlRuntime();
-            if (_immersiveButton != null)
-                _immersiveButton.style.display = canShowFpsControls ? DisplayStyle.Flex : DisplayStyle.None;
-
-            if (_mockupButton != null)
-                _mockupButton.style.display = _isMockupMode ? DisplayStyle.None : DisplayStyle.Flex;
+            bool canShowGyroToggle = !_isMockupMode && IsMobileWebGlRuntime();
 
             if (_gyroToggleButton != null)
                 _gyroToggleButton.style.display = canShowGyroToggle ? DisplayStyle.Flex : DisplayStyle.None;
 
             if (_cutoffSlider != null)
                 _cutoffSlider.style.display = canShowAlphaSlider ? DisplayStyle.Flex : DisplayStyle.None;
+
+            if (_modeToggle != null ) 
+            {
+                _modeToggle.SetValueWithoutNotify(!_isMockupMode);
+                UpdateModeToggleVisualState(!_isMockupMode);
+                _modeToggleRow.style.display = canShowMockupControls ? DisplayStyle.Flex : DisplayStyle.None;
+            }
+        }
+
+        private void UpdateModeToggleVisualState(bool isOn)
+        {
+            if (_modeToggle == null)
+                return;
+
+            if (isOn)
+            {
+                _modeToggle.RemoveFromClassList(ModeToggleOffClassName);
+                _modeToggle.AddToClassList(ModeToggleOnClassName);
+            }
+            else
+            {
+                _modeToggle.RemoveFromClassList(ModeToggleOnClassName);
+                _modeToggle.AddToClassList(ModeToggleOffClassName);
+            }
+        }
+
+        private static bool HasActiveOrbitalHandlerInstance()
+        {
+            const string orbitalHandlerTypeName = "Twinny.Mobile.Cameras.MobileCinemachineOrbitalHandler";
+            MonoBehaviour[] behaviours = UnityEngine.Object.FindObjectsByType<MonoBehaviour>(
+                FindObjectsInactive.Include,
+                FindObjectsSortMode.None
+            );
+
+            for (int i = 0; i < behaviours.Length; i++)
+            {
+                MonoBehaviour behaviour = behaviours[i];
+                if (behaviour == null || !behaviour.isActiveAndEnabled)
+                    continue;
+
+                if (behaviour.GetType().FullName == orbitalHandlerTypeName)
+                    return true;
+            }
+
+            return false;
         }
 
         private void UpdateGyroToggleLabel()
@@ -716,16 +864,6 @@ namespace Twinny.Mobile.Samples
 #else
             return false;
 #endif
-        }
-
-        private void UpdateHomeButtonVisibility(string loadedSceneName)
-        {
-            if (_homeButton == null)
-                return;
-
-            bool shouldShow = !string.IsNullOrWhiteSpace(loadedSceneName) &&
-                              !string.Equals(loadedSceneName, TwinnyMobileRuntime.GetDefaultSceneName(), System.StringComparison.Ordinal);
-            _homeButton.style.display = shouldShow ? DisplayStyle.Flex : DisplayStyle.None;
         }
 
         private void SetSceneRootsVisibility(bool visible)
