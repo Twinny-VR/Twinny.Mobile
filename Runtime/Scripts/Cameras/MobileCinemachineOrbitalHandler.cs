@@ -120,6 +120,7 @@ namespace Twinny.Mobile.Cameras
         private CinemachineTracker _trackingTargetPoi;
         private bool _notifyPoiFocusedOnTransitionComplete;
         private MobileCinemachineDemoMode _demoMode;
+        private bool _suppressTrackingTargetPoiOverrides;
 
         private struct SuspendedHardLookState
         {
@@ -232,6 +233,7 @@ namespace Twinny.Mobile.Cameras
             {
                 if (_pointOfInterest == value) return;
                 _pointOfInterest = value;
+                _suppressTrackingTargetPoiOverrides = value == null;
                 RefreshTargetOverrides(forceRefresh: true);
             }
         }
@@ -301,7 +303,10 @@ namespace Twinny.Mobile.Cameras
         public void OnExitImmersiveMode() {}
         public void OnEnterMockupMode() => ApplyMode(true);
         public void OnExitMockupMode() => ApplyMode(false);
-        public void OnEnterDemoMode() { }
+        public void OnEnterDemoMode()
+        {
+            ClearSelectedFloorForDemoMode();
+        }
         public void OnExitDemoMode() { }
 
         public void OnFloorSelected(Interactables.Floor floor)
@@ -668,6 +673,9 @@ namespace Twinny.Mobile.Cameras
                 return _selectedFloor.TrackerPoint;
             }
 
+            if (_suppressTrackingTargetPoiOverrides)
+                return null;
+
             return trackingTarget != null ? trackingTarget.GetComponent<CinemachineTracker>() : null;
         }
 
@@ -851,6 +859,7 @@ namespace Twinny.Mobile.Cameras
             CinemachineTracker targetPoi = floor.TrackerPoint;
             CinemachineFloor previousFloor = _selectedFloor;
 
+            _suppressTrackingTargetPoiOverrides = false;
             ResetDemoModeForFloorTransition();
             CancelActiveFloorSelectionTransition();
 
@@ -1184,6 +1193,25 @@ namespace Twinny.Mobile.Cameras
             if (_demoMode == null) return;
 
             _demoMode.ResetDemoModeSilently();
+        }
+
+        private void ClearSelectedFloorForDemoMode()
+        {
+            CinemachineFloor selectedFloor = _selectedFloor;
+
+            CancelActiveFloorSelectionTransition();
+            SetDeoccluderEnabledForFloorTransition(true);
+
+            _selectedFloor = null;
+            _pointOfInterest = null;
+            _notifyPoiFocusedOnTransitionComplete = false;
+            _suppressTrackingTargetPoiOverrides = true;
+
+            RefreshTargetOverrides(forceRefresh: true);
+            ApplyDeoccluderRadiusOverride(null);
+            RestoreHardLookAfterPan();
+
+            selectedFloor?.Unselect();
         }
 
 
