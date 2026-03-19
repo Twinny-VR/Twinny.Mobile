@@ -283,23 +283,10 @@ namespace Twinny.Mobile.Samples
             HandleFloorUnselected(selectedFloor);
             SetFloorHintVisibility(false);
             Debug.Log($"[MainInterface] Floor hint clicked: {selectedFloor.Data.ImmersionSceneName}");
-            SceneRequest(selectedFloor.Data);
+            selectedFloor.Request();
         }
 
-        private void SceneRequest(FloorData data)
-        {
-            if (data == null || string.IsNullOrWhiteSpace(data.ImmersionSceneName))
-                return;
 
-            CallbackHub.CallAction<IMobileUICallbacks>(callback =>
-            {
-                if (data.SceneOpenMode == FloorData.FloorSceneOpenMode.Mockup)
-                    callback.OnMockupRequested(data.ImmersionSceneName);
-                else
-                    callback.OnImmersiveRequested(data.ImmersionSceneName);
-            });
-
-        }
 
         private void RegisterCallbacks()
         {
@@ -381,7 +368,7 @@ namespace Twinny.Mobile.Samples
                 _levelSelectorMenu.style.display = DisplayStyle.None;
 
             SetLevelSelectorOpenState(false);
-            SceneRequest(floorData);
+            TwinnyMobileManager.SceneRequest(floorData);
         }
 
         private void HandleRootPointerDown(PointerDownEvent evt)
@@ -624,8 +611,21 @@ namespace Twinny.Mobile.Samples
         public void OnFloorSelected(Floor floor) { }
         public void OnFloorFocused(Floor floor)
         {
-            if (_selectedFloor == null)
+            if (floor == null)
+            {
+                _isFloorHintReadyToShow = false;
+                SetFloorHintVisibility(false);
                 return;
+            }
+
+            if (_selectedFloor != null && floor != _selectedFloor)
+            {
+                _isFloorHintReadyToShow = false;
+                SetFloorHintVisibility(false);
+                return;
+            }
+
+            _selectedFloor ??= floor;
 
             _isFloorHintReadyToShow = true;
             EnsureFloorHintCreated();
@@ -633,7 +633,10 @@ namespace Twinny.Mobile.Samples
             SetFloorHintVisibility(true);
             UpdateFloorHintPosition();
         }
-        public void OnFloorUnselected(Floor floor) { }
+        public void OnFloorUnselected(Floor floor)
+        {
+            HandleFloorUnselected(floor);
+        }
 
         public void OnExperienceLoaded()
         {

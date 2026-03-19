@@ -44,9 +44,11 @@ namespace Twinny.Mobile.Interactables
         */
         [SerializeField] private bool _applyAlphaClip;
         [SerializeField] private float _alphaClipHeight = 3f;
+        [SerializeField] private bool _requestOnSelect;
 
         public bool ApplyAlphaClip => _applyAlphaClip;
         public float AlphaClipHeight => _alphaClipHeight;
+        public bool RequestOnSelect => _requestOnSelect;
 
         [Header("Events")]
         [SerializeField] private UnityEvent _onSelect;
@@ -66,6 +68,9 @@ namespace Twinny.Mobile.Interactables
             _onSelect?.Invoke();
             Selected?.Invoke(this);
             CallbackHub.CallAction<ITwinnyMobileCallbacks>(callback => callback.OnFloorSelected(this));
+
+            if (_requestOnSelect && !string.IsNullOrWhiteSpace(Data.ImmersionSceneName))
+                Request();
         }
 
         public virtual void Focus()
@@ -82,6 +87,9 @@ namespace Twinny.Mobile.Interactables
             CallbackHub.CallAction<ITwinnyMobileCallbacks>(callback => callback.OnFloorUnselected(this));
 
         }
+
+        public virtual void Request() => TwinnyMobileManager.SceneRequest(_data);
+        
 
     }
 }

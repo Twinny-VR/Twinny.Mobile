@@ -66,7 +66,7 @@ PrefabInstance:
       objectReference: {fileID: 2100000, guid: 64c543557d4112e44a8bf2f3727f9427, type: 2}
     - target: {fileID: 919132149155446097, guid: 9951c8e7bf84e7947941893f3f79ffde, type: 3}
       propertyPath: m_Name
-      value: OLDPrisma
+      value: PlaceHolder
       objectReference: {fileID: 0}
     - target: {fileID: 2108629213487684686, guid: 9951c8e7bf84e7947941893f3f79ffde, type: 3}
       propertyPath: m_Layer
@@ -74,7 +74,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 3396913584297481876, guid: 9951c8e7bf84e7947941893f3f79ffde, type: 3}
       propertyPath: m_IsActive
-      value: 0
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 4803813084240995372, guid: 9951c8e7bf84e7947941893f3f79ffde, type: 3}
       propertyPath: m_CastShadows
@@ -175,6 +175,7 @@ MonoBehaviour:
     <SceneOpenMode>k__BackingField: 0
   _applyAlphaClip: 0
   _alphaClipHeight: 3
+  _requestOnSelect: 0
   _onSelect:
     m_PersistentCalls:
       m_Calls: []

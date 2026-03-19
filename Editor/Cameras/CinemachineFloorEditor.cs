@@ -90,10 +90,19 @@ namespace Twinny.Mobile.Editor.Cameras
             SerializedProperty subtitleProp = dataProp.FindPropertyRelative("<Subtitle>k__BackingField");
             SerializedProperty immersionSceneProp = dataProp.FindPropertyRelative("<ImmersionSceneName>k__BackingField");
             SerializedProperty sceneOpenModeProp = dataProp.FindPropertyRelative("<SceneOpenMode>k__BackingField");
+            SerializedProperty requestOnSelectProp = serializedObject.FindProperty("_requestOnSelect");
 
             AddProperty(container, titleProp, serializedObject);
             AddProperty(container, subtitleProp, serializedObject);
             AddProperty(container, immersionSceneProp, serializedObject);
+
+            PropertyField requestOnSelectField = null;
+            if (requestOnSelectProp != null)
+            {
+                requestOnSelectField = new PropertyField(requestOnSelectProp);
+                requestOnSelectField.Bind(serializedObject);
+                container.Add(requestOnSelectField);
+            }
 
             if (sceneOpenModeProp != null)
             {
@@ -106,10 +115,24 @@ namespace Twinny.Mobile.Editor.Cameras
                     serializedObject.Update();
                     bool hasSceneName = !string.IsNullOrWhiteSpace(immersionSceneProp?.stringValue);
                     sceneOpenModeField.style.display = hasSceneName ? DisplayStyle.Flex : DisplayStyle.None;
+                    if (requestOnSelectField != null)
+                        requestOnSelectField.style.display = hasSceneName ? DisplayStyle.Flex : DisplayStyle.None;
                 }
 
                 RefreshSceneOpenModeVisibility();
                 sceneOpenModeField.TrackPropertyValue(immersionSceneProp, _ => RefreshSceneOpenModeVisibility());
+            }
+            else if (requestOnSelectField != null)
+            {
+                void RefreshRequestOnSelectVisibility()
+                {
+                    serializedObject.Update();
+                    bool hasSceneName = !string.IsNullOrWhiteSpace(immersionSceneProp?.stringValue);
+                    requestOnSelectField.style.display = hasSceneName ? DisplayStyle.Flex : DisplayStyle.None;
+                }
+
+                RefreshRequestOnSelectVisibility();
+                requestOnSelectField.TrackPropertyValue(immersionSceneProp, _ => RefreshRequestOnSelectVisibility());
             }
         }
 

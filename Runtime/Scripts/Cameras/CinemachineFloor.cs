@@ -1,7 +1,5 @@
-using System;
 using Twinny.Mobile.Interactables;
 using UnityEngine;
-using UnityEngine.Events;
 using UnityEngine.Scripting.APIUpdating;
 using UnityEngine.Serialization;
 
@@ -15,13 +13,10 @@ namespace Twinny.Mobile.Cameras
     [MovedFrom(true, "Twinny.Mobile.Interactables", "Twinny.Mobile", "Floor")]
     public class CinemachineFloor : Floor
     {
-
         [Header("Camera Target")]
         [SerializeField] private bool _useFocusPoint = true;
         [FormerlySerializedAs("_focusPoint")]
         [SerializeField] private CinemachineTracker _trackerPoint;
-
-
 
         public bool UseFocusPoint => _useFocusPoint;
         public CinemachineTracker TrackerPoint => _trackerPoint;
@@ -29,7 +24,6 @@ namespace Twinny.Mobile.Cameras
         public Transform TargetTransform => _useFocusPoint && _trackerPoint != null ? _trackerPoint.transform : transform;
         public Vector3 TargetPosition => TargetTransform.position;
         public Quaternion TargetRotation => TargetTransform.rotation;
-
 
   
 

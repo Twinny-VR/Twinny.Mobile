@@ -1,6 +1,7 @@
-using System.Threading.Tasks;
 using Concept.Core;
+using System.Threading.Tasks;
 using Twinny.Core;
+using Twinny.Mobile.Interactables;
 using Twinny.UI;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -33,6 +34,29 @@ namespace Twinny.Mobile
             StateMachine.ChangeState(new IdleState(this));
             CallbackHub.CallAction<IMobileUICallbacks>(callback => callback.OnStartExperienceRequested(TwinnyMobileRuntime.GetDefaultSceneName()));
         }
+
+
+
+
+        public static void SceneRequest(FloorData data)
+        {
+            if (data == null || string.IsNullOrWhiteSpace(data.ImmersionSceneName))
+                return;
+
+            CallbackHub.CallAction<IMobileUICallbacks>(callback =>
+            {
+                if (data.SceneOpenMode == FloorData.FloorSceneOpenMode.Mockup)
+                    callback.OnMockupRequested(data.ImmersionSceneName);
+                else
+                    callback.OnImmersiveRequested(data.ImmersionSceneName);
+            });
+
+        }
+
+
+
+
+
 
         public async void OnImmersiveRequested(string sceneName = "")
         {
