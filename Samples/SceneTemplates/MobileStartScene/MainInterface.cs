@@ -216,10 +216,27 @@ namespace Twinny.Mobile.Samples
             _floorHintWidget.SetFloor(_selectedFloor);
         }
 
+        private static bool CanShowFloorHint(Floor floor)
+        {
+            if (floor == null)
+                return false;
+
+            if (floor is CinemachineFloor cinemachineFloor)
+                return cinemachineFloor.ShowHint;
+
+            return true;
+        }
+
         private void UpdateFloorHintPosition()
         {
             if (_floorHintWidget == null || _selectedFloor == null || _document == null) return;
             if (_document.rootVisualElement?.panel == null) return;
+            if (!CanShowFloorHint(_selectedFloor))
+            {
+                SetFloorHintVisibility(false);
+                return;
+            }
+
             if (!_isFloorHintReadyToShow)
             {
                 SetFloorHintVisibility(false);
@@ -565,11 +582,13 @@ namespace Twinny.Mobile.Samples
         public void OnImmersiveRequested(string sceneName)
         {
             SetModeButtons(isMockup: false);
+            SetFloorHintVisibility(false);
         }
 
         public void OnMockupRequested(string sceneName)
         {
             SetModeButtons(isMockup: true);
+            SetFloorHintVisibility(false);
         }
 
         public void OnStartExperienceRequested(string sceneName) { }
@@ -620,6 +639,14 @@ namespace Twinny.Mobile.Samples
 
             if (_selectedFloor != null && floor != _selectedFloor)
             {
+                _isFloorHintReadyToShow = false;
+                SetFloorHintVisibility(false);
+                return;
+            }
+
+            if (!CanShowFloorHint(floor))
+            {
+                _selectedFloor = floor;
                 _isFloorHintReadyToShow = false;
                 SetFloorHintVisibility(false);
                 return;

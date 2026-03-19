@@ -129,7 +129,7 @@ MonoBehaviour:
   _data:
     <Title>k__BackingField: Piscina
     <Subtitle>k__BackingField: "\xC1rea de Lazer"
-    <ImmersionSceneName>k__BackingField: Teste
+    <ImmersionSceneName>k__BackingField: SetPlaceHolderSceneName
     <SceneOpenMode>k__BackingField: 0
   _applyAlphaClip: 0
   _alphaClipHeight: 3
@@ -169,6 +169,7 @@ MonoBehaviour:
         m_CallState: 2
   _useFocusPoint: 1
   _trackerPoint: {fileID: 0}
+  _showHint: 0
 --- !u!1 &7837873098059913058
 GameObject:
   m_ObjectHideFlags: 0

@@ -91,10 +91,12 @@ namespace Twinny.Mobile.Editor.Cameras
             SerializedProperty immersionSceneProp = dataProp.FindPropertyRelative("<ImmersionSceneName>k__BackingField");
             SerializedProperty sceneOpenModeProp = dataProp.FindPropertyRelative("<SceneOpenMode>k__BackingField");
             SerializedProperty requestOnSelectProp = serializedObject.FindProperty("_requestOnSelect");
+            SerializedProperty showHintProp = serializedObject.FindProperty("_showHint");
 
             AddProperty(container, titleProp, serializedObject);
             AddProperty(container, subtitleProp, serializedObject);
             AddProperty(container, immersionSceneProp, serializedObject);
+            AddProperty(container, showHintProp, serializedObject);
 
             PropertyField requestOnSelectField = null;
             if (requestOnSelectProp != null)
