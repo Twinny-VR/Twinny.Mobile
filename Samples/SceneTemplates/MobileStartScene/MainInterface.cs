@@ -983,7 +983,7 @@ namespace Twinny.Mobile.Samples
             if (_cutoffSlider != null)
                 _cutoffSlider.SetValueWithoutNotify(clampedHeight);
 
-            Shader.SetGlobalFloat("_CutoffHeight", clampedHeight);
+            AlphaClipper.SetCutoffHeight(clampedHeight);
         }
     }
 }
