@@ -1,9 +1,9 @@
 using System;
 using Concept.Core;
-using Twinny.Mobile;
+using Twinny.Multiplatform;
 using UnityEngine;
 
-namespace Twinny.Mobile.Interactables
+namespace Twinny.Multiplatform.Interactables
 {
     [Serializable]
     public class BuildingFloorEntry
@@ -30,7 +30,7 @@ namespace Twinny.Mobile.Interactables
         }
     }
 
-    public class Building : MonoBehaviour, ITwinnyMobileCallbacks
+    public class Building : MonoBehaviour, IPlatformCallbacks
     {
         [SerializeField] private BuildingFloorEntry[] _floors;
         [SerializeField] private bool _showAllFloorsWhenUnselected = true;
@@ -39,12 +39,12 @@ namespace Twinny.Mobile.Interactables
 
         private void OnEnable()
         {
-            CallbackHub.RegisterCallback<ITwinnyMobileCallbacks>(this);
+            CallbackHub.RegisterCallback<IPlatformCallbacks>(this);
         }
 
         private void OnDisable()
         {
-            CallbackHub.UnregisterCallback<ITwinnyMobileCallbacks>(this);
+            CallbackHub.UnregisterCallback<IPlatformCallbacks>(this);
         }
 
         public void ShowFloorsAtOrAbove(Floor selectedFloor)

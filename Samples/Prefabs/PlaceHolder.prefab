@@ -167,7 +167,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 1bf8564b87116524bbf889a0d1f55189, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Twinny.Mobile.Cameras::Twinny.Mobile.Cameras.Floor
+  m_EditorClassIdentifier: Twinny.Multiplatform.Cameras::Twinny.Multiplatform.Cameras.Floor
   _data:
     <Title>k__BackingField: Piscina
     <Subtitle>k__BackingField: "\xC1rea de Lazer"

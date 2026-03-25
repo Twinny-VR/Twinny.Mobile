@@ -4,7 +4,7 @@ using Twinny.Shaders;
 using UnityEngine;
 using UnityEngine.Events;
 
-namespace Twinny.Mobile.Interactables
+namespace Twinny.Multiplatform.Interactables
 {
 
     [Serializable]
@@ -73,7 +73,7 @@ namespace Twinny.Mobile.Interactables
 
             _onSelect?.Invoke();
             Selected?.Invoke(this);
-            CallbackHub.CallAction<ITwinnyMobileCallbacks>(callback => callback.OnFloorSelected(this));
+            CallbackHub.CallAction<IPlatformCallbacks>(callback => callback.OnFloorSelected(this));
 
             if (_requestOnSelect && !string.IsNullOrWhiteSpace(Data.ImmersionSceneName))
                 Request();
@@ -83,18 +83,18 @@ namespace Twinny.Mobile.Interactables
         {
             _onFocused?.Invoke();
             Focused?.Invoke(this);
-            CallbackHub.CallAction<ITwinnyMobileCallbacks>(callback => callback.OnFloorFocused(this));
+            CallbackHub.CallAction<IPlatformCallbacks>(callback => callback.OnFloorFocused(this));
         }
 
         public virtual void Unselect()
         {
             _onUnselect?.Invoke();
             Unselected?.Invoke(this);
-            CallbackHub.CallAction<ITwinnyMobileCallbacks>(callback => callback.OnFloorUnselected(this));
+            CallbackHub.CallAction<IPlatformCallbacks>(callback => callback.OnFloorUnselected(this));
 
         }
 
-        public virtual void Request() => TwinnyMobileManager.SceneRequest(_data);
+        public virtual void Request() => PlatformManager.SceneRequest(_data);
         
 
     }

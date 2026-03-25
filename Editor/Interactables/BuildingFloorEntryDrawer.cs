@@ -1,10 +1,10 @@
-using Twinny.Mobile.Interactables;
+using Twinny.Multiplatform.Interactables;
 using UnityEditor;
 using UnityEditor.UIElements;
 using UnityEngine;
 using UnityEngine.UIElements;
 
-namespace Twinny.Mobile.Editor.Interactables
+namespace Twinny.Multiplatform.Editor.Interactables
 {
     [CustomPropertyDrawer(typeof(BuildingFloorEntry))]
     public class BuildingFloorEntryDrawer : PropertyDrawer

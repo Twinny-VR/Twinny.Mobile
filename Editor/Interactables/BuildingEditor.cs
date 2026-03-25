@@ -1,10 +1,10 @@
-using Twinny.Mobile.Interactables;
+using Twinny.Multiplatform.Interactables;
 using UnityEditor;
 using UnityEditor.UIElements;
 using UnityEngine;
 using UnityEngine.UIElements;
 
-namespace Twinny.Mobile.Editor.Interactables
+namespace Twinny.Multiplatform.Editor.Interactables
 {
     [CustomEditor(typeof(Building))]
     [CanEditMultipleObjects]
@@ -12,7 +12,7 @@ namespace Twinny.Mobile.Editor.Interactables
     {
         private const string UxmlPath = "Packages/com.twinny.twe26/Editor/Shared/ComponentInspectorTemplate.uxml";
         private const string UssPath = "Packages/com.twinny.twe26/Editor/Shared/ComponentInspectorTemplate.uss";
-        private const string IconsPath = "Packages/com.twinny.mobile/Editor/Cameras/Icons/icons.png";
+        private const string IconsPath = "Packages/com.twinny.multiplatform/Editor/Cameras/Icons/icons.png";
         private const string BuildingIconName = "icons_7";
         private const string TitleFontPath = "Packages/com.twinny.twe26/Editor/SetupGuide/Resources/Fonts/DINNextLTPro-Condensed.otf";
 

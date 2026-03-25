@@ -1,9 +1,9 @@
 using Twinny.Editor.Navigation;
-using Twinny.Mobile.Cameras;
+using Twinny.Multiplatform.Cameras;
 using UnityEditor;
 using UnityEngine.UIElements;
 
-namespace Twinny.Mobile.Editor.Cameras
+namespace Twinny.Multiplatform.Editor.Cameras
 {
     [CustomEditor(typeof(CinemachineLandmark))]
     [CanEditMultipleObjects]

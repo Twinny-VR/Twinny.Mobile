@@ -1,11 +1,11 @@
 using Twinny.Editor.Navigation;
-using Twinny.Mobile.Cameras;
+using Twinny.Multiplatform.Cameras;
 using UnityEditor;
 using UnityEditor.UIElements;
 using UnityEngine;
 using UnityEngine.UIElements;
 
-namespace Twinny.Mobile.Editor.Cameras
+namespace Twinny.Multiplatform.Editor.Cameras
 {
     [CustomEditor(typeof(CinemachineFloor))]
     [CanEditMultipleObjects]
@@ -13,7 +13,7 @@ namespace Twinny.Mobile.Editor.Cameras
     {
         private const string UxmlPath = "Packages/com.twinny.twe26/Editor/Shared/ComponentInspectorTemplate.uxml";
         private const string UssPath = "Packages/com.twinny.twe26/Editor/Shared/ComponentInspectorTemplate.uss";
-        private const string IconsPath = "Packages/com.twinny.mobile/Editor/Cameras/Icons/icons.png";
+        private const string IconsPath = "Packages/com.twinny.multiplatform/Editor/Cameras/Icons/icons.png";
         private const string FloorIconName = "icons_5";
         private const string TitleFontPath = "Packages/com.twinny.twe26/Editor/SetupGuide/Resources/Fonts/DINNextLTPro-Condensed.otf";
         private const float SliderStep = 0.1f;

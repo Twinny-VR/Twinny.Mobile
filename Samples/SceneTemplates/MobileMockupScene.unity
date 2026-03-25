@@ -316,7 +316,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: bec20169136285c458d20312a86f2096, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Twinny.Mobile.Camera::Twinny.Mobile.Camera.MobileCinemachineOrbitalHandler
+  m_EditorClassIdentifier: Twinny.Multiplatform.Camera::Twinny.Multiplatform.Camera.CinemachineOrbitalHandler
   _cinemachineCamera: {fileID: 74936397}
   _orbitalFollow: {fileID: 74936400}
   _rotateSpeed: 0.1
@@ -375,7 +375,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: f88a9abebddcbf74e85c19967e600421, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Twinny.Mobile::Twinny.Mobile.Navigation.MobileFpsNavigation
+  m_EditorClassIdentifier: Twinny.Multiplatform::Twinny.Multiplatform.Navigation.FpsNavigation
   _agent: {fileID: 346207448}
   _maxSampleDistance: 3
   _navMeshAreaMask: -1
@@ -831,7 +831,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: c952a436ac9c9844a8e607cd57f77a17, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Twinny.Mobile.Camera::Twinny.Mobile.Camera.MobileCinemachineFpsHandler
+  m_EditorClassIdentifier: Twinny.Multiplatform.Camera::Twinny.Multiplatform.Camera.CinemachineFpsHandler
   _cinemachineCamera: {fileID: 819653633}
   _panTilt: {fileID: 819653636}
   _rotateSpeed: 0.1

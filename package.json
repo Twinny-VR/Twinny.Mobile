@@ -1,11 +1,11 @@
 {
-  "name": "com.twinny.mobile",
-  "displayName": "Twinny Mobile",
+  "name": "com.twinny.multiplatform",
+  "displayName": "Twinny Multiplatform",
   "version": "26.0.22",
   "type": "tool",
   "unity": "6000.0",
   "unityRelease": "43f1",
-  "description": "A Mobile module for Twinny Engine.\n\nhttps://github.com/Twinny-VR/Twinny.Mobile.git",
+  "description": "A multiplatform module for Twinny Engine.\n\nhttps://github.com/Twinny-VR/Twinny.Multiplatform.git",
   "keywords": [],
   "author": {
     "name": "Twinny Vr",
@@ -14,7 +14,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/Twinny-VR/Twinny.Mobile.git"
+    "url": "https://github.com/Twinny-VR/Twinny.Multiplatform.git"
   },
   "dependencies": {
     "com.unity.cinemachine": "3.1.5"

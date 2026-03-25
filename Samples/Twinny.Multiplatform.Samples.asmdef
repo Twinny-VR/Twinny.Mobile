@@ -1,0 +1,19 @@
+{
+    "name": "Twinny.Multiplatform.Samples",
+    "rootNamespace": "Twinny.Multiplatform.Samples",
+    "references": [
+        "ConceptFactory.Core",
+        "Twinny.Core",
+        "Twinny.Multiplatform",
+        "Twinny.Multiplatform.Cameras"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

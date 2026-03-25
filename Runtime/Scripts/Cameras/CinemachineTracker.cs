@@ -1,6 +1,6 @@
 using UnityEngine;
 
-namespace Twinny.Mobile.Cameras
+namespace Twinny.Multiplatform.Cameras
 {
     public class CinemachineTracker : MonoBehaviour
     {

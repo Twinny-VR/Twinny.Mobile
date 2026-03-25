@@ -1,16 +1,16 @@
-using Twinny.Mobile.Interactables;
+using Twinny.Multiplatform.Interactables;
 using UnityEngine;
 using UnityEngine.Scripting.APIUpdating;
 using UnityEngine.Serialization;
 
-namespace Twinny.Mobile.Cameras
+namespace Twinny.Multiplatform.Cameras
 {
  
 
     /// <summary>
     /// Represents a selectable floor/area with camera target metadata and selection events.
     /// </summary>
-    [MovedFrom(true, "Twinny.Mobile.Interactables", "Twinny.Mobile", "Floor")]
+    [MovedFrom(true, "Twinny.Multiplatform.Interactables", "Twinny.Multiplatform", "Floor")]
     public class CinemachineFloor : Floor
     {
         [Header("Camera Target")]

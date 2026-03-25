@@ -1,7 +1,7 @@
 using UnityEngine;
 using UnityEngine.UIElements;
 
-namespace Twinny.Mobile.Samples
+namespace Twinny.Multiplatform.Samples
 {
     [UxmlElement]
     public partial class WSLabel : VisualElement

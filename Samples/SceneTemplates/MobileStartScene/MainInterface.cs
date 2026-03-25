@@ -2,17 +2,17 @@ using Concept.Core;
 using System.Collections.Generic;
 using System.Linq;
 using Twinny.Core.Input;
-using Twinny.Mobile.Cameras;
-using Twinny.Mobile.Interactables;
-using Twinny.Mobile.Navigation;
+using Twinny.Multiplatform.Cameras;
+using Twinny.Multiplatform.Interactables;
+using Twinny.Multiplatform.Navigation;
 using Twinny.Shaders;
 using UnityEngine;
 using UnityEngine.UIElements;
 
-namespace Twinny.Mobile.Samples
+namespace Twinny.Multiplatform.Samples
 {
     [RequireComponent(typeof(UIDocument))]
-    public class MainInterface : MonoBehaviour, IMobileUICallbacks, ITwinnyMobileCallbacks, IMobileInputCallbacks
+    public class MainInterface : MonoBehaviour, IPlatformUICallbacks, IPlatformCallbacks, IPlatformInputCallbacks
     {
         private const string StartButtonName = "StartButton";
         private const string GyroToggleButtonName = "GyroToggleButton";
@@ -86,17 +86,17 @@ namespace Twinny.Mobile.Samples
             CaptureDefaultSortingOrder();
             CacheElements();
             RegisterCallbacks();
-            CallbackHub.RegisterCallback<ITwinnyMobileCallbacks>(this);
-            CallbackHub.RegisterCallback<IMobileUICallbacks>(this);
-            CallbackHub.RegisterCallback<IMobileInputCallbacks>(this);
+            CallbackHub.RegisterCallback<IPlatformCallbacks>(this);
+            CallbackHub.RegisterCallback<IPlatformUICallbacks>(this);
+            CallbackHub.RegisterCallback<IPlatformInputCallbacks>(this);
         }
 
         private void OnDisable()
         {
             UnregisterCallbacks();
-            CallbackHub.UnregisterCallback<IMobileInputCallbacks>(this);
-            CallbackHub.UnregisterCallback<IMobileUICallbacks>(this);
-            CallbackHub.UnregisterCallback<ITwinnyMobileCallbacks>(this);
+            CallbackHub.UnregisterCallback<IPlatformInputCallbacks>(this);
+            CallbackHub.UnregisterCallback<IPlatformUICallbacks>(this);
+            CallbackHub.UnregisterCallback<IPlatformCallbacks>(this);
         }
 
         private void Update()
@@ -399,7 +399,7 @@ namespace Twinny.Mobile.Samples
                 _levelSelectorMenu.style.display = DisplayStyle.None;
 
             SetLevelSelectorOpenState(false);
-            TwinnyMobileManager.SceneRequest(floorData);
+            PlatformManager.SceneRequest(floorData);
         }
 
         private void HandleRootPointerDown(PointerDownEvent evt)
@@ -495,7 +495,7 @@ namespace Twinny.Mobile.Samples
 
         private void HandleStartClicked()
         {
-            CallbackHub.CallAction<IMobileUICallbacks>(callback => callback.OnStartExperienceRequested(TwinnyMobileRuntime.GetDefaultSceneName()));
+            CallbackHub.CallAction<IPlatformUICallbacks>(callback => callback.OnStartExperienceRequested(PlatformRuntime.GetDefaultSceneName()));
         }
 
         private void HandleModeToggleChanged(ChangeEvent<bool> evt)
@@ -503,16 +503,16 @@ namespace Twinny.Mobile.Samples
             UpdateModeToggleVisualState(evt.newValue);
 
             if (evt.newValue)
-                CallbackHub.CallAction<IMobileUICallbacks>(callback => callback.OnImmersiveRequested());
+                CallbackHub.CallAction<IPlatformUICallbacks>(callback => callback.OnImmersiveRequested());
             else
-                CallbackHub.CallAction<IMobileUICallbacks>(callback => callback.OnMockupRequested());
+                CallbackHub.CallAction<IPlatformUICallbacks>(callback => callback.OnMockupRequested());
         }
 
         private void HandleGyroToggleClicked()
         {
             _gyroEnabled = !_gyroEnabled;
             UpdateGyroToggleLabel();
-            CallbackHub.CallAction<IMobileUICallbacks>(callback => callback.OnGyroscopeToggled(_gyroEnabled));
+            CallbackHub.CallAction<IPlatformUICallbacks>(callback => callback.OnGyroscopeToggled(_gyroEnabled));
         }
 
         private void HandleCutoffChanged(ChangeEvent<float> evt)
@@ -863,7 +863,7 @@ namespace Twinny.Mobile.Samples
 
         private void ApplyModeButtons()
         {
-            bool canShowMockupControls = HasActiveOrbitalHandlerInstance() && MobileFpsNavigation.HasActiveInstance;
+            bool canShowMockupControls = HasActiveOrbitalHandlerInstance() && FpsNavigation.HasActiveInstance;
             bool canShowAlphaSlider = _isMockupMode && AlphaClipper.Instance;
             bool canShowGyroToggle = !_isMockupMode && IsMobileWebGlRuntime();
 
@@ -900,7 +900,7 @@ namespace Twinny.Mobile.Samples
 
         private static bool HasActiveOrbitalHandlerInstance()
         {
-            const string orbitalHandlerTypeName = "Twinny.Mobile.Cameras.MobileCinemachineOrbitalHandler";
+            const string orbitalHandlerTypeName = "Twinny.Multiplatform.Cameras.CinemachineOrbitalHandler";
             MonoBehaviour[] behaviours = UnityEngine.Object.FindObjectsByType<MonoBehaviour>(
                 FindObjectsInactive.Include,
                 FindObjectsSortMode.None

@@ -1,9 +1,9 @@
-using Twinny.Mobile.Cameras;
-using Twinny.Mobile.Interactables;
+using Twinny.Multiplatform.Cameras;
+using Twinny.Multiplatform.Interactables;
 using UnityEngine;
 using UnityEngine.UIElements;
 
-namespace Twinny.Mobile.Samples
+namespace Twinny.Multiplatform.Samples
 {
     [UxmlElement]
     public partial class FloorHintWidget : VisualElement

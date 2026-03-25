@@ -1,14 +1,14 @@
 using Concept.Core;
 using System.Collections.Generic;
-using Twinny.Mobile.Interactables;
+using Twinny.Multiplatform.Interactables;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UIElements;
 
-namespace Twinny.Mobile.Samples
+namespace Twinny.Multiplatform.Samples
 {
     [RequireComponent(typeof(UIDocument))]
-    public class MockupInterface : MonoBehaviour, ITwinnyMobileCallbacks
+    public class MockupInterface : MonoBehaviour, IPlatformCallbacks
     {
         private const string CardListName = "FloorCardList";
         private const string EmptyStateLabelName = "EmptyStateLabel";
@@ -38,13 +38,13 @@ namespace Twinny.Mobile.Samples
             EnsureDocument();
             CacheElements();
             PopulateCards();
-            CallbackHub.RegisterCallback<ITwinnyMobileCallbacks>(this);
+            CallbackHub.RegisterCallback<IPlatformCallbacks>(this);
         }
 
         private void OnDisable()
         {
             UnregisterCardListCallbacks();
-            CallbackHub.UnregisterCallback<ITwinnyMobileCallbacks>(this);
+            CallbackHub.UnregisterCallback<IPlatformCallbacks>(this);
         }
 
         private void EnsureDocument()
@@ -157,7 +157,7 @@ namespace Twinny.Mobile.Samples
             if (data == null || string.IsNullOrWhiteSpace(data.ImmersionSceneName))
                 return;
 
-            CallbackHub.CallAction<IMobileUICallbacks>(callback =>
+            CallbackHub.CallAction<IPlatformUICallbacks>(callback =>
             {
                 if (data.SceneOpenMode == FloorData.FloorSceneOpenMode.Mockup)
                     callback.OnMockupRequested(data);

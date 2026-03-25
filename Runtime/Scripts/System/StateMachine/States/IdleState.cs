@@ -1,14 +1,14 @@
 using Twinny.Core;
 using UnityEngine;
 
-namespace Twinny.Mobile
+namespace Twinny.Multiplatform
 {
 
     public class IdleState : IState
     {
-        private TwinnyMobileManager m_manager;
+        private PlatformManager m_manager;
 
-        public IdleState(TwinnyMobileManager managerOwner) => m_manager = managerOwner;
+        public IdleState(PlatformManager managerOwner) => m_manager = managerOwner;
 
         public void Enter() => SetGameMode();
 
@@ -23,7 +23,7 @@ namespace Twinny.Mobile
             ChangeState(new TwinnyXRMultiplayer());
             return;
 #endif
-            GameMode.ChangeState(new TwinnyMobileSingleplayer(m_manager));
+            GameMode.ChangeState(new PlatformSingleplayer(m_manager));
         }
     }
 }

@@ -1,6 +1,6 @@
 using UnityEngine;
 
-namespace Twinny.Mobile.Samples
+namespace Twinny.Multiplatform.Samples
 {
     public sealed class WSLabelBillboard : MonoBehaviour
     {

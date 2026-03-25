@@ -1,7 +1,7 @@
 using System.Collections;
 using UnityEngine;
 
-namespace Twinny.Mobile.Env
+namespace Twinny.Multiplatform.Env
 {
     /// <summary>
     /// Smoothly toggles a global shader blend factor between 0 and 1 on demand.

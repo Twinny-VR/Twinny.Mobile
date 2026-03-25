@@ -186,7 +186,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 48cf7e4a202ac1844981112a7bf24913, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Twinny.Mobile.Samples::Twinny.Mobile.Samples.MainInterface
+  m_EditorClassIdentifier: Twinny.Multiplatform.Samples::Twinny.Multiplatform.Samples.MainInterface
   _document: {fileID: 1646028456}
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
